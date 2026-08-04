@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>YearGlass — A Living Digital Sanctuary</title>
+    <meta
+      name="description"
+      content="A living world that grows with you. A tiny ecosystem. A lifetime of memories."
+    />
+    <meta name="theme-color" content="#0d0d0e" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        background: #0d0d0e;
+        color: #f0ede8;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #app, #yearglass-mount, canvas {
+        width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        overflow: hidden !important;
+        touch-action: none;
+      }
+      [class*="card"], [class*="dialogue"], [class*="popup"] {
+        background-color: #f7f2ea !important;
+        color: #111111 !important;
+      }
+      [class*="card"] *, [class*="dialogue"] * {
+        color: #111111 !important;
+        -webkit-text-fill-color: #111111 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
