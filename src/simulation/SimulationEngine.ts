@@ -92,6 +92,38 @@ export class SimulationEngine {
       this.pipeline.scene.setRoomScene(this.room);
     }
 
+    this.pipeline.setOnPropTap((prop) => {
+      this.audio.play('shimmer');
+      this.audio.playButtonTap();
+
+      if (prop === 'camera') {
+        const dataUrl = this.pipeline?.scene.captureSnapshot();
+        if (dataUrl && this.uiOverlay) {
+          this.uiOverlay.renderCameraModal(dataUrl);
+        }
+      } else if (prop === 'journal') {
+        if (this.uiOverlay) {
+          this.uiOverlay.renderJournalModal(this.memory);
+        }
+      } else if (prop === 'lamp') {
+        this.setLamp(!this.clock.lampOn);
+        this.uiOverlay?.showToast('💡 Workspace Lamp', this.clock.lampOn ? 'Lamp turned on.' : 'Lamp turned off.');
+      } else if (prop === 'mug') {
+        this.uiOverlay?.showDialogueCard(
+          'Warm Coffee Mug',
+          'The coffee is warm. A quiet steam rises into the sanctuary air.'
+        );
+      } else if (prop === 'window') {
+        this.env.advanceTime(3.0);
+        this.uiOverlay?.showToast('🌅 Window View', 'Looking through the glass, daylight gently shifts.');
+      } else if (prop === 'shelf') {
+        this.uiOverlay?.showDialogueCard(
+          'Sanctuary Bookshelf',
+          'A collection of gentle field guides and botanical notes gathered over peaceful days.'
+        );
+      }
+    });
+
     this.pipeline.start();
     this.audio.installGestureUnlock();
 

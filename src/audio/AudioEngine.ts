@@ -7,8 +7,8 @@
  *   - Ambient hum: low sine drone + harmonic detune
  *   - Dome shimmer: rising arpeggio
  *
- * First-gesture unlock satisfies browser autoplay policies across Chrome,
- * Firefox, Safari, and Android. Graceful fallback if Web Audio is unsupported.
+ * Automatically suspends Web Audio context when document/tab is hidden
+ * and resumes when returning to foreground.
  */
 
 export type YearglassSound = 'rain' | 'bird' | 'hum' | 'shimmer';
@@ -29,6 +29,28 @@ export class AudioEngine {
   private readonly active: ActiveNode[] = [];
   private readonly unlockHandlers: Array<() => void> = [];
 
+  constructor() {
+    this.installVisibilityListener();
+  }
+
+  installVisibilityListener(): () => void {
+    if (typeof document === 'undefined') return () => undefined;
+    const handler = () => {
+      if (this.disposed || !this.ctx) return;
+      if (document.hidden || document.visibilityState === 'hidden') {
+        if (this.ctx.state === 'running') {
+          void this.ctx.suspend();
+        }
+      } else if (document.visibilityState === 'visible') {
+        if (this.ctx.state === 'suspended' && this.started) {
+          void this.ctx.resume();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }
+
   async unlock(): Promise<boolean> {
     if (this.disposed) return false;
     if (this.ctx && this.ctx.state === 'running') return true;
@@ -44,7 +66,7 @@ export class AudioEngine {
         this.master.connect(this.ctx.destination);
         this.buildNoiseBuffer();
       }
-      if (this.ctx.state === 'suspended') {
+      if (this.ctx.state === 'suspended' && (!document.hidden)) {
         await this.ctx.resume();
       }
       return true;

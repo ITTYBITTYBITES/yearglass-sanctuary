@@ -23,6 +23,10 @@ export class EnvironmentSystem {
     }
   }
 
+  advanceTime(hoursToAdvance: number): void {
+    this.hours = (this.hours + hoursToAdvance) % 24;
+  }
+
   get currentHours(): number {
     return this.hours;
   }

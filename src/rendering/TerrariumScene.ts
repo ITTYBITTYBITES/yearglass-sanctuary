@@ -9,7 +9,10 @@
  *   Layer 1: Inner Bioluminescence & Ambient Backlight
  *
  * Integrates the side-profile RoomScene backdrop (wall, window, shelves, desk, props)
- * rendering the terrarium as a bell-jar glass cloche resting on a wooden tray base in Room View.
+ * rendering the terrarium as a clear bell-jar glass cloche resting on a wooden tray base in Room View.
+ *
+ * Implements hit-testing for terrarium dome and interactive desk props (camera, journal, lamp, mug, window, shelf),
+ * and snapshot capture for Photo mode.
  *
  * Implements robust WebGL context loss recovery (`webglcontextrestored`) and
  * Canvas 2D fallback composition.
@@ -46,6 +49,14 @@ const LAYERS: LayerSpec[] = [
 
 export interface DomeHitResult {
   hit: boolean;
+  normX: number;
+  normY: number;
+}
+
+export type SceneHitType = 'dome' | 'camera' | 'journal' | 'lamp' | 'mug' | 'window' | 'shelf' | 'none';
+
+export interface SceneHitResult {
+  type: SceneHitType;
   normX: number;
   normY: number;
 }
@@ -192,13 +203,28 @@ export class TerrariumScene {
     this.uniforms.uResolution = [width, height];
   }
 
+  captureSnapshot(): string {
+    this.render();
+    return this.canvas.toDataURL('image/png');
+  }
+
   isPointInDome(clientX: number, clientY: number): DomeHitResult {
+    const res = this.hitTestScene(clientX, clientY);
+    return {
+      hit: res.type === 'dome',
+      normX: res.normX,
+      normY: res.normY,
+    };
+  }
+
+  hitTestScene(clientX: number, clientY: number): SceneHitResult {
     const rect = this.canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
     const cssWidth = rect.width;
     const cssHeight = rect.height;
+    const cx = cssWidth / 2;
 
     const aspect = cssWidth / Math.max(1, cssHeight);
     const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
@@ -207,24 +233,72 @@ export class TerrariumScene {
     const r = Math.min(cssWidth, cssHeight) * roomScale * baseScale;
 
     const deskY = cssHeight * 0.62;
+
+    // 1. Check Terrarium Dome
     const roomCy = deskY - r * 0.60;
     const focusCy = cssHeight * 0.48;
     const focusProgress = Math.min(1, Math.max(0, (baseScale - 1.0) / 1.4));
-    const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
-    const cy = roomCy + (focusCy - roomCy) * focusProgress + this.cameraOffsetY * cssHeight;
+    const domeCx = cx + this.cameraOffsetX * cssWidth;
+    const domeCy = roomCy + (focusCy - roomCy) * focusProgress + this.cameraOffsetY * cssHeight;
 
-    const dx = x - cx;
-    const dy = y - cy;
-    const dist = Math.hypot(dx, dy);
-
-    if (dist <= r * 1.15) {
+    const dx = x - domeCx;
+    const dy = y - domeCy;
+    if (Math.hypot(dx, dy) <= r * 1.18) {
       return {
-        hit: true,
+        type: 'dome',
         normX: Math.max(-1, Math.min(1, dx / r)),
         normY: Math.max(-1, Math.min(1, dy / r)),
       };
     }
-    return { hit: false, normX: 0, normY: 0 };
+
+    // Interactive desk props active in Room View
+    if (!this.isFocused) {
+      // 2. Camera (Far Right Desk)
+      const camX = Math.min(cssWidth - 45, cssWidth * 0.92);
+      const camY = deskY + 10;
+      if (Math.abs(x - camX) < 32 && Math.abs(y - camY) < 28) {
+        return { type: 'camera', normX: 0, normY: 0 };
+      }
+
+      // 3. Journal & Hourglass (Right of Dome)
+      const clocheW = Math.min(cssWidth * 0.38, 260);
+      const journalX = cx + clocheW * 0.65;
+      const journalY = deskY + 6;
+      if (x >= journalX - 12 && x <= journalX + 160 && y >= journalY - 15 && y <= journalY + 55) {
+        return { type: 'journal', normX: 0, normY: 0 };
+      }
+
+      // 4. Coffee Mug (Left of Dome)
+      const lampX = Math.max(25, cssWidth * 0.16);
+      const mugX = Math.max(lampX + 35, cx - clocheW * 0.72);
+      const mugY = deskY + 10;
+      if (Math.abs(x - mugX) < 24 && Math.abs(y - mugY) < 28) {
+        return { type: 'mug', normX: 0, normY: 0 };
+      }
+
+      // 5. Lamp (Left Desk)
+      if (Math.abs(x - lampX) < 38 && y >= deskY - cssHeight * 0.25 && y <= deskY + 20) {
+        return { type: 'lamp', normX: 0, normY: 0 };
+      }
+
+      // 6. Window (Centered Wall)
+      const windowW = Math.min(cssWidth * 0.44, 340);
+      const windowH = Math.min(cssHeight * 0.34, 240);
+      const windowX = (cssWidth - windowW) / 2;
+      const windowY = cssHeight * 0.10;
+      if (x >= windowX && x <= windowX + windowW && y >= windowY && y <= windowY + windowH) {
+        return { type: 'window', normX: 0, normY: 0 };
+      }
+
+      // 7. Shelves (Left Wall)
+      const shelfX = Math.max(12, cssWidth * 0.04);
+      const shelfW = Math.min(cssWidth * 0.22, 160);
+      if (x >= shelfX - 10 && x <= shelfX + shelfW + 10 && y >= cssHeight * 0.20 && y <= cssHeight * 0.52) {
+        return { type: 'shelf', normX: 0, normY: 0 };
+      }
+    }
+
+    return { type: 'none', normX: 0, normY: 0 };
   }
 
   triggerRipple(normX: number, normY: number): void {
@@ -349,7 +423,7 @@ export class TerrariumScene {
     const deskY = cssHeight * 0.62;
 
     if (!activeFocus) {
-      // === ROOM VIEW: Glass Cloche Bell Jar resting on a Wooden Tray Base ===
+      // === ROOM VIEW: Clear Bell Jar Glass Cloche resting on Wooden Tray Base ===
       const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
       const trayY = deskY + 4 + this.cameraOffsetY * cssHeight;
       const domeW = Math.min(cssWidth * 0.38, 250);
@@ -373,7 +447,7 @@ export class TerrariumScene {
       ctx.ellipse(cx, trayY - 2, domeW * 0.50, 7, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Cloche Soil Bed & Bioluminescence
+      // 2. Cloche Soil Bed & Luminous Bioluminescence
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(cx - domeW * 0.48, trayY - 2);
@@ -387,11 +461,11 @@ export class TerrariumScene {
       ctx.closePath();
       ctx.clip();
 
-      // Bioluminescent atmosphere inside cloche
+      // Transparent/luminous atmosphere inside cloche (plants are crisp & visible!)
       const bg = ctx.createRadialGradient(cx, trayY - domeH * 0.4, 0, cx, trayY - domeH * 0.4, domeW * 0.6);
-      bg.addColorStop(0, '#1c3e32');
-      bg.addColorStop(0.7, '#122820');
-      bg.addColorStop(1, 'rgba(5, 12, 8, 0.90)');
+      bg.addColorStop(0, 'rgba(28, 62, 50, 0.72)');
+      bg.addColorStop(0.7, 'rgba(18, 40, 32, 0.65)');
+      bg.addColorStop(1, 'rgba(5, 12, 8, 0.78)');
       ctx.fillStyle = bg;
       ctx.fillRect(cx - domeW, domeTopY - 10, domeW * 2, domeH + 20);
 
@@ -468,7 +542,7 @@ export class TerrariumScene {
       ctx.restore(); // end clip
 
       // 3. Cloche Glass Shell Reflection & Outlines
-      ctx.strokeStyle = 'rgba(188, 216, 238, 0.75)';
+      ctx.strokeStyle = 'rgba(188, 216, 238, 0.85)';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(cx - domeW * 0.48, trayY - 2);
@@ -483,7 +557,7 @@ export class TerrariumScene {
 
       // Glass Specular Curve Highlight along Left Arch
       const specGrad = ctx.createLinearGradient(cx - domeW * 0.42, domeTopY, cx - domeW * 0.2, trayY);
-      specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
       specGrad.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
       ctx.strokeStyle = specGrad;
       ctx.lineWidth = 3.5;

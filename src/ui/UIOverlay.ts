@@ -2,7 +2,8 @@
  * YearGlass Sanctuary — UI Overlay System
  *
  * Consolidates all HUD controls and actions into a visible bottom drawer.
- * Provides direct, bidirectional View: Room / View: Focus controls.
+ * Provides direct, bidirectional View: Room / View: Focus controls, Journal modal,
+ * Settings modal, and Camera Snapshot Photo modal.
  */
 
 import type { GrowthEvent } from '../simulation/GrowthSystem';
@@ -245,6 +246,63 @@ export class UIOverlay {
         this.activeToast = null;
       }
     }, 4500);
+  }
+
+  renderCameraModal(dataUrl: string): void {
+    if (this.activeModal) this.activeModal.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'yg-modal-overlay';
+    overlay.style.cssText =
+      'position:fixed;inset:0;z-index:99999;background:rgba(10,12,10,0.82);' +
+      'backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
+
+    const modal = document.createElement('div');
+    modal.className = 'yg-modal-card';
+    modal.style.cssText =
+      'max-width:32rem;width:100%;padding:1.25rem;' +
+      'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.6);' +
+      'border-radius:1.2rem;box-shadow:0 24px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:1rem;pointer-events:auto;';
+
+    modal.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.1);padding-bottom:0.75rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span style="font-size:1.4rem;">📷</span>
+          <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:#111111;">Sanctuary Snapshot</h3>
+        </div>
+        <button class="yg-modal-close" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#333;padding:0.2rem 0.5rem;" aria-label="Close">✕</button>
+      </div>
+      <div style="width:100%;border-radius:0.8rem;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,0.25);background:#0d0d0e;text-align:center;">
+        <img src="${dataUrl}" alt="Sanctuary Snapshot" style="width:100%;height:auto;max-height:50vh;object-fit:contain;display:block;" />
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding-top:0.25rem;">
+        <span style="font-size:0.82rem;color:#666;font-weight:600;">Captured from your living sanctuary</span>
+        <div style="display:flex;gap:0.5rem;">
+          <a href="${dataUrl}" download="yearglass-sanctuary-snapshot.png" style="padding:0.6rem 1.1rem;background:#2e3f57;color:#fff;border-radius:999px;font-weight:700;text-decoration:none;font-size:0.85rem;display:inline-flex;align-items:center;gap:0.4rem;min-height:38px;">📸 Download Photo</a>
+          <button class="yg-modal-close-btn" style="padding:0.6rem 1rem;background:#e5dfd3;color:#1a1a1a;border:none;border-radius:999px;font-weight:700;cursor:pointer;font-size:0.85rem;min-height:38px;">Keep</button>
+        </div>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    this.activeModal = overlay;
+
+    const closeHandler = (e: Event) => {
+      e.stopPropagation();
+      overlay.remove();
+      this.activeModal = null;
+    };
+
+    modal.querySelector('.yg-modal-close')?.addEventListener('click', closeHandler);
+    modal.querySelector('.yg-modal-close-btn')?.addEventListener('click', closeHandler);
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        this.activeModal = null;
+      }
+    });
   }
 
   renderJournalModal(memory: MemoryEngine): void {
