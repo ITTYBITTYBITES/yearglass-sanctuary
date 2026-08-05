@@ -32,11 +32,11 @@ interface LayerSpec {
 }
 
 const LAYERS: LayerSpec[] = [
-  { key: 'bioluminescence', depth: 1, tint: '#1e3a34', alpha: 1 },
-  { key: 'backgroundMoss', depth: 2, tint: '#223c30', alpha: 1 },
-  { key: 'activeStage', depth: 3, tint: '#2c4a38', alpha: 1 },
-  { key: 'foregroundSoil', depth: 4, tint: '#3a2f24', alpha: 1 },
-  { key: 'glass', depth: 5, tint: '#bcd8ee', alpha: 1 },
+  { key: 'bioluminescence', depth: 1, tint: '#1e3a34', alpha: 0.08 },
+  { key: 'backgroundMoss', depth: 2, tint: '#223c30', alpha: 0.05 },
+  { key: 'activeStage', depth: 3, tint: '#2c4a38', alpha: 0.05 },
+  { key: 'foregroundSoil', depth: 4, tint: '#3a2f24', alpha: 0.05 },
+  { key: 'glass', depth: 5, tint: '#bcd8ee', alpha: 0.08 },
 ];
 
 export interface DomeHitResult {
@@ -294,13 +294,15 @@ export class TerrariumScene {
     const cy = height / 2;
     const r = Math.min(width, height) * 0.42;
 
-    // Layer 1: Bioluminescent Ambient Backlight
-    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.3);
+    // Layer 1: Bioluminescent Ambient Backlight inside dome
+    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
     bg.addColorStop(0, '#1c3e32');
-    bg.addColorStop(0.55, '#122820');
-    bg.addColorStop(1, '#050c08');
+    bg.addColorStop(0.7, '#122820');
+    bg.addColorStop(1, 'rgba(5, 12, 8, 0.85)');
     ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, width, height);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
 
     // Layer 2: Background Moss & Soil Bed
     ctx.fillStyle = this.soilMoisture > 0.4 ? '#284a37' : '#33382c';

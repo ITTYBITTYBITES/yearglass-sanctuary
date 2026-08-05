@@ -69,14 +69,29 @@
         overflow: hidden !important;
         touch-action: none;
       }
+      .yearglass-top-bar {
+        position: fixed !important;
+        top: max(10px, env(safe-area-inset-top)) !important;
+        left: 1rem !important;
+        right: 1rem !important;
+        z-index: 9999 !important;
+        pointer-events: auto !important;
+      }
+      .yg-hud-btn, .yg-btn-badge {
+        min-height: 40px !important;
+        padding: 8px 14px !important;
+        font-size: 14px !important;
+        line-height: 1.2 !important;
+        color: #1a1a1a !important;
+        background: #fdfbf7 !important;
+        border: 1px solid rgba(191, 160, 106, 0.6) !important;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+        pointer-events: auto !important;
+        z-index: 9999 !important;
+        touch-action: manipulation !important;
+      }
       .yearglass-layer, .yearglass-room, .yearglass-ui-overlay {
         pointer-events: none !important;
-      }
-      .yearglass-top-bar, .yg-hud-btn, .yg-btn-badge, .yg-dialogue-card,
-      .yg-evolution-popup, .yg-toast, .yg-modal-overlay, .yg-modal-card,
-      .yg-close-btn, .yg-ack-btn {
-        pointer-events: auto !important;
-        z-index: 100 !important;
       }
       [class*="card"], [class*="dialogue"], [class*="popup"] {
         background-color: #f7f2ea !important;

@@ -33,35 +33,39 @@ export class UIOverlay {
     this.uiContainer = document.createElement('div');
     this.uiContainer.className = 'yearglass-ui-overlay';
     this.uiContainer.style.cssText =
-      'position:absolute;inset:0;pointer-events:none;z-index:30;' +
+      'position:fixed;inset:0;pointer-events:none;z-index:9999;' +
       'display:flex;flex-direction:column;justify-content:space-between;padding:1rem;';
 
     const topBar = document.createElement('div');
     topBar.className = 'yearglass-top-bar';
     topBar.style.cssText =
-      'display:flex;align-items:center;justify-content:space-between;width:100%;pointer-events:auto;z-index:100;';
+      'display:flex;align-items:center;justify-content:space-between;width:100%;' +
+      'margin-top:max(8px, env(safe-area-inset-top));pointer-events:auto;z-index:9999;';
 
     const statusBadge = document.createElement('button');
     statusBadge.id = 'yg-status-badge';
     statusBadge.className = 'yg-btn-badge';
     statusBadge.setAttribute('aria-label', 'Sanctuary status: Day and soil moisture. Tap to open Journal.');
     statusBadge.style.cssText =
-      'display:inline-flex;align-items:center;gap:0.5rem;padding:0.55rem 0.95rem;' +
-      'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
-      'border-radius:999px;font-size:0.88rem;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.35);' +
-      'cursor:pointer;pointer-events:auto;user-select:none;touch-action:manipulation;min-height:44px;z-index:100;';
+      'display:inline-flex;align-items:center;gap:0.5rem;min-height:40px;padding:8px 14px;' +
+      'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.6);' +
+      'border-radius:999px;font-size:14px;font-weight:700;line-height:1.2;' +
+      'box-shadow:0 6px 20px rgba(0,0,0,0.4);cursor:pointer;pointer-events:auto !important;' +
+      'user-select:none;touch-action:manipulation;z-index:9999;';
 
     statusBadge.innerHTML = `<span>☀️ Day ${day}</span> · <span>💧 ${Math.round(moisture * 100)}% Soil</span>`;
 
     const handleBadgeClick = (e: Event) => {
+      e.preventDefault();
       e.stopPropagation();
       this.openJournalSignal();
     };
-    statusBadge.addEventListener('click', handleBadgeClick);
-    statusBadge.addEventListener('touchstart', handleBadgeClick, { passive: true });
+    statusBadge.addEventListener('pointerdown', handleBadgeClick, { passive: false });
+    statusBadge.addEventListener('touchstart', handleBadgeClick, { passive: false });
+    statusBadge.addEventListener('click', handleBadgeClick, { passive: false });
 
     const actionRow = document.createElement('div');
-    actionRow.style.cssText = 'display:flex;align-items:center;gap:0.5rem;pointer-events:auto;z-index:100;';
+    actionRow.style.cssText = 'display:flex;align-items:center;gap:0.5rem;pointer-events:auto;z-index:9999;';
 
     const createHeaderBtn = (label: string, icon: string, onClick: (e: Event) => void) => {
       const btn = document.createElement('button');
@@ -70,18 +74,21 @@ export class UIOverlay {
       btn.title = label;
       btn.innerHTML = `${icon} <span class="yg-btn-label">${label}</span>`;
       btn.style.cssText =
-        'display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 0.85rem;' +
-        'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
-        'border-radius:999px;font-size:0.85rem;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.35);' +
-        'cursor:pointer;pointer-events:auto;user-select:none;touch-action:manipulation;min-height:44px;z-index:100;';
+        'display:inline-flex;align-items:center;gap:0.45rem;min-height:40px;padding:8px 14px;' +
+        'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.6);' +
+        'border-radius:999px;font-size:14px;font-weight:700;line-height:1.2;' +
+        'box-shadow:0 6px 20px rgba(0,0,0,0.4);cursor:pointer;pointer-events:auto !important;' +
+        'user-select:none;touch-action:manipulation;z-index:9999;';
 
       const handler = (e: Event) => {
+        e.preventDefault();
         e.stopPropagation();
         onClick(e);
       };
 
-      btn.addEventListener('click', handler);
-      btn.addEventListener('touchstart', handler, { passive: true });
+      btn.addEventListener('pointerdown', handler, { passive: false });
+      btn.addEventListener('touchstart', handler, { passive: false });
+      btn.addEventListener('click', handler, { passive: false });
       return btn;
     };
 

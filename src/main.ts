@@ -71,7 +71,8 @@ async function bootSanctuary(): Promise<void> {
       intro.remove();
     }, 850);
 
-    engine.focusDome();
+    // Force default initial state to ROOM view (not FOCUS mode)
+    engine.exitFocus();
   };
 
   intro.addEventListener('click', dismiss, { once: true });
