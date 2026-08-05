@@ -1,8 +1,8 @@
 /**
  * YearGlass Sanctuary — UI Overlay System
  *
- * Consolidates all HUD controls and actions into a bottom drawer.
- * Completely removes the top HUD bar and provides direct View: Room / View: Focus controls.
+ * Consolidates all HUD controls and actions into a visible bottom drawer.
+ * Provides direct, bidirectional View: Room / View: Focus controls.
  */
 
 import type { GrowthEvent } from '../simulation/GrowthSystem';
@@ -28,7 +28,6 @@ export class UIOverlay {
   private activeModal: HTMLElement | null = null;
   private activeToast: HTMLElement | null = null;
   private toastTimeout = 0;
-  private isDrawerExpanded = false;
   private isFocused = false;
   private callbacks: UIOverlayCallbacks;
 
@@ -43,12 +42,14 @@ export class UIOverlay {
       'position:fixed;inset:0;pointer-events:none;z-index:9999;' +
       'display:flex;flex-direction:column;justify-content:flex-end;padding:0;';
 
+    // Bottom Container for Toasts & Dialogue Cards
     const bottomSlot = document.createElement('div');
     bottomSlot.id = 'yg-bottom-slot';
     bottomSlot.style.cssText =
       'display:flex;flex-direction:column;align-items:center;gap:0.75rem;width:100%;' +
-      'margin-bottom:3.5rem;pointer-events:none;z-index:9999;';
+      'margin-bottom:5.5rem;pointer-events:none;z-index:9999;';
 
+    // Visible Bottom Control Drawer
     this.mountBottomDrawer(container, day, moisture);
 
     this.uiContainer.append(bottomSlot);
@@ -60,42 +61,27 @@ export class UIOverlay {
     this.bottomDrawer.id = 'yg-bottom-drawer';
     this.bottomDrawer.className = 'yg-drawer-card';
     this.bottomDrawer.style.cssText =
-      'position:fixed;bottom:0;left:0;right:0;z-index:9999;pointer-events:auto;' +
+      'position:fixed;bottom:0;left:0;right:0;z-index:9999;pointer-events:auto !important;opacity:1;' +
       'padding:0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom));' +
       'background:#fdfbf7;color:#1a1a1a;border-top:2px solid #bfa06a;' +
       'border-radius:1.2rem 1.2rem 0 0;box-shadow:0 -12px 36px rgba(0,0,0,0.45);' +
-      'transform:translateY(calc(100% - 2.8rem));transition:transform 0.35s cubic-bezier(0.2,0.8,0.2,1);';
+      'transform:translateY(0);transition:transform 0.35s cubic-bezier(0.2,0.8,0.2,1);';
 
     this.bottomDrawer.innerHTML = `
-      <div id="yg-drawer-handle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-bottom:0.6rem;user-select:none;touch-action:manipulation;">
+      <div id="yg-drawer-handle" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:0.6rem;user-select:none;touch-action:manipulation;">
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <span style="width:28px;height:4px;background:#bfa06a;border-radius:999px;opacity:0.8;"></span>
           <span id="yg-drawer-status" style="font-size:0.88rem;font-weight:700;color:#1a1a1a;">☀️ Day ${day} · 💧 ${Math.round(moisture * 100)}% Soil</span>
         </div>
-        <span style="font-size:0.78rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;">Controls ▴</span>
+        <span style="font-size:0.78rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;">Sanctuary Controls</span>
       </div>
-      <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.6rem;padding-top:0.5rem;">
+      <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.6rem;padding-top:0.4rem;">
         <button id="yg-drawer-view-toggle" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">🔍 Inspect Terrarium</button>
         <button id="yg-drawer-water" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">💧 Water Plant</button>
         <button id="yg-drawer-journal" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">📖 Journal</button>
         <button id="yg-drawer-settings" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">⚙️ Settings</button>
       </div>
     `;
-
-    const handle = this.bottomDrawer.querySelector('#yg-drawer-handle');
-    const toggleDrawer = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.callbacks.onButtonTap?.();
-      this.isDrawerExpanded = !this.isDrawerExpanded;
-      if (this.bottomDrawer) {
-        this.bottomDrawer.style.transform = this.isDrawerExpanded ? 'translateY(0)' : 'translateY(calc(100% - 2.8rem))';
-      }
-    };
-
-    handle?.addEventListener('pointerdown', toggleDrawer, { passive: false });
-    handle?.addEventListener('touchstart', toggleDrawer, { passive: false });
-    handle?.addEventListener('click', toggleDrawer, { passive: false });
 
     this.viewToggleBtn = this.bottomDrawer.querySelector('#yg-drawer-view-toggle') as HTMLButtonElement;
     this.updateViewToggleLabel();
