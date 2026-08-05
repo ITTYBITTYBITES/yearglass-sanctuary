@@ -1,9 +1,9 @@
 /**
  * YearGlass Sanctuary — Camera Controller
  *
- * Hardcoded default initial state to ROOM view mode (`zoom = 1.0`, `isFocused = false`).
- * Separates ROOM_VIEW_SCALE (0.38) from FOCUS_VIEW_SCALE (1.8) so the terrarium dome
- * occupies ~35-38% of canvas height in Room View, keeping the room backdrop fully visible.
+ * Aspect-aware camera scale calculation for mobile portrait and desktop viewports.
+ * On portrait mobile (aspect < 1.0), ROOM_VIEW_SCALE scales down proportionally
+ * so the room background (desk, shelf, window, lamp) fits horizontally.
  */
 
 export interface CameraView {
@@ -17,7 +17,7 @@ const MOBILE_BREAKPOINT = 768;
 const IDLE_LIGHT = 0.35;
 const ACTIVE_LIGHT = 0.95;
 
-export const ROOM_VIEW_SCALE = 0.38;
+export const ROOM_VIEW_SCALE = 0.35;
 export const FOCUS_VIEW_SCALE = 1.8;
 
 export class CameraController {
@@ -79,20 +79,27 @@ export class CameraController {
     }
   }
 
+  private getEffectiveRoomScale(): number {
+    const aspect = this.viewport.width / Math.max(1, this.viewport.height);
+    const portraitFactor = aspect < 1.0 ? Math.max(0.45, aspect * 0.7) : 1.0;
+    return ROOM_VIEW_SCALE * portraitFactor;
+  }
+
   private computeTargets(): void {
     const { width, height } = this.viewport;
     const aspect = width / Math.max(1, height);
     const isMobile = width < MOBILE_BREAKPOINT || aspect < 1.2;
+    const roomScale = this.getEffectiveRoomScale();
 
     if (this.target.focusMode) {
-      this.target.zoom = isMobile ? (FOCUS_VIEW_SCALE / ROOM_VIEW_SCALE) * 1.05 : (FOCUS_VIEW_SCALE / ROOM_VIEW_SCALE);
+      this.target.zoom = isMobile ? (FOCUS_VIEW_SCALE / roomScale) * 1.05 : (FOCUS_VIEW_SCALE / roomScale);
       this.target.offsetX = 0;
       this.target.offsetY = 0;
       return;
     }
 
     if (isMobile) {
-      this.target.zoom = Math.max(1.0, Math.min(1.15, 1.08 / aspect));
+      this.target.zoom = 1.0;
       this.target.offsetX = 0;
       this.target.offsetY = -0.03;
     } else {
@@ -144,12 +151,13 @@ export class CameraController {
   }
 
   get currentScaleFactor(): number {
-    return this.view.zoom * ROOM_VIEW_SCALE;
+    return this.view.zoom * this.getEffectiveRoomScale();
   }
 
   update(dt: number): void {
     const isFocused = this.target.focusMode || this.view.focusMode;
-    const targetZoom = isFocused ? (FOCUS_VIEW_SCALE / ROOM_VIEW_SCALE) : 1.0;
+    const roomScale = this.getEffectiveRoomScale();
+    const targetZoom = isFocused ? (FOCUS_VIEW_SCALE / roomScale) : 1.0;
     const k = Math.min(1, dt * 8.0);
 
     this.view.zoom += (targetZoom - this.view.zoom) * k;
