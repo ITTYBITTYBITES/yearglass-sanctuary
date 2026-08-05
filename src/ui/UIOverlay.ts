@@ -1,7 +1,9 @@
 /**
  * YearGlass Sanctuary — UI Overlay System
  *
- * Decoupled high-contrast UI overlay HUD and modal management.
+ * Decoupled high-contrast UI overlay HUD and modal controllers.
+ * Top control pills attach event listeners immediately upon DOM mount
+ * independently of WebGL rendering state.
  */
 
 import type { GrowthEvent } from '../simulation/GrowthSystem';
@@ -37,24 +39,31 @@ export class UIOverlay {
     const topBar = document.createElement('div');
     topBar.className = 'yearglass-top-bar';
     topBar.style.cssText =
-      'display:flex;align-items:center;justify-content:space-between;width:100%;pointer-events:auto;';
+      'display:flex;align-items:center;justify-content:space-between;width:100%;pointer-events:auto;z-index:100;';
 
     const statusBadge = document.createElement('button');
     statusBadge.id = 'yg-status-badge';
     statusBadge.className = 'yg-btn-badge';
-    statusBadge.setAttribute('aria-label', 'Sanctuary status: Day and soil moisture');
+    statusBadge.setAttribute('aria-label', 'Sanctuary status: Day and soil moisture. Tap to open Journal.');
     statusBadge.style.cssText =
-      'display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 0.9rem;' +
+      'display:inline-flex;align-items:center;gap:0.5rem;padding:0.55rem 0.95rem;' +
       'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
       'border-radius:999px;font-size:0.88rem;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.35);' +
-      'cursor:pointer;transition:transform 0.15s ease;';
+      'cursor:pointer;pointer-events:auto;user-select:none;touch-action:manipulation;min-height:44px;z-index:100;';
 
     statusBadge.innerHTML = `<span>☀️ Day ${day}</span> · <span>💧 ${Math.round(moisture * 100)}% Soil</span>`;
 
-    const actionRow = document.createElement('div');
-    actionRow.style.cssText = 'display:flex;align-items:center;gap:0.5rem;';
+    const handleBadgeClick = (e: Event) => {
+      e.stopPropagation();
+      this.openJournalSignal();
+    };
+    statusBadge.addEventListener('click', handleBadgeClick);
+    statusBadge.addEventListener('touchstart', handleBadgeClick, { passive: true });
 
-    const createHeaderBtn = (label: string, icon: string, onClick: () => void) => {
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;align-items:center;gap:0.5rem;pointer-events:auto;z-index:100;';
+
+    const createHeaderBtn = (label: string, icon: string, onClick: (e: Event) => void) => {
       const btn = document.createElement('button');
       btn.className = 'yg-hud-btn';
       btn.setAttribute('aria-label', label);
@@ -64,9 +73,15 @@ export class UIOverlay {
         'display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 0.85rem;' +
         'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
         'border-radius:999px;font-size:0.85rem;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.35);' +
-        'cursor:pointer;user-select:none;touch-action:manipulation;min-height:44px;';
+        'cursor:pointer;pointer-events:auto;user-select:none;touch-action:manipulation;min-height:44px;z-index:100;';
 
-      btn.addEventListener('click', onClick);
+      const handler = (e: Event) => {
+        e.stopPropagation();
+        onClick(e);
+      };
+
+      btn.addEventListener('click', handler);
+      btn.addEventListener('touchstart', handler, { passive: true });
       return btn;
     };
 
@@ -121,7 +136,7 @@ export class UIOverlay {
       'pointer-events:auto;max-width:32rem;width:calc(100% - 2rem);padding:1rem 1.25rem;' +
       'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
       'border-radius:1rem;box-shadow:0 20px 50px rgba(0,0,0,0.45);' +
-      'font-family:system-ui,-apple-system,sans-serif;line-height:1.5;';
+      'font-family:system-ui,-apple-system,sans-serif;line-height:1.5;z-index:100;';
 
     card.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
@@ -131,7 +146,10 @@ export class UIOverlay {
       <p style="margin:0;font-size:0.92rem;color:#222222;font-weight:500;">${message}</p>
     `;
 
-    card.querySelector('.yg-close-btn')?.addEventListener('click', () => card.remove());
+    card.querySelector('.yg-close-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      card.remove();
+    });
 
     slot.querySelectorAll('.yg-dialogue-card').forEach((el) => el.remove());
     slot.appendChild(card);
@@ -151,7 +169,7 @@ export class UIOverlay {
       'pointer-events:auto;max-width:30rem;width:calc(100% - 2rem);padding:1.1rem 1.35rem;' +
       'background:linear-gradient(180deg, #fefdf9 0%, #f7f2ea 100%);color:#1a1a1a;' +
       'border:2px solid #bfa06a;border-radius:1.1rem;box-shadow:0 20px 50px rgba(0,0,0,0.45);' +
-      'text-align:left;line-height:1.55;';
+      'text-align:left;line-height:1.55;z-index:100;';
 
     popup.innerHTML = `
       <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
@@ -165,7 +183,10 @@ export class UIOverlay {
       </div>
     `;
 
-    popup.querySelector('.yg-ack-btn')?.addEventListener('click', () => popup.remove());
+    popup.querySelector('.yg-ack-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      popup.remove();
+    });
 
     slot.querySelectorAll('.yg-evolution-popup').forEach((el) => el.remove());
     slot.appendChild(popup);
@@ -183,7 +204,7 @@ export class UIOverlay {
     toast.style.cssText =
       'pointer-events:auto;padding:0.7rem 1.1rem;background:#fdfbf7;color:#1a1a1a;' +
       'border:1px solid rgba(191,160,106,0.5);border-radius:999px;' +
-      'box-shadow:0 10px 28px rgba(0,0,0,0.3);font-size:0.88rem;font-weight:600;';
+      'box-shadow:0 10px 28px rgba(0,0,0,0.3);font-size:0.88rem;font-weight:600;z-index:100;';
     toast.innerHTML = `<strong>${title}</strong> — ${text}`;
 
     this.activeToast = toast;
@@ -203,15 +224,15 @@ export class UIOverlay {
     const overlay = document.createElement('div');
     overlay.className = 'yg-modal-overlay';
     overlay.style.cssText =
-      'position:fixed;inset:0;z-index:50;background:rgba(10,12,10,0.72);' +
-      'backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+      'position:fixed;inset:0;z-index:150;background:rgba(10,12,10,0.72);' +
+      'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
 
     const modal = document.createElement('div');
     modal.className = 'yg-modal-card';
     modal.style.cssText =
       'max-width:34rem;width:100%;max-height:80vh;display:flex;flex-direction:column;' +
       'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
-      'border-radius:1.2rem;box-shadow:0 24px 60px rgba(0,0,0,0.5);overflow:hidden;';
+      'border-radius:1.2rem;box-shadow:0 24px 60px rgba(0,0,0,0.5);overflow:hidden;pointer-events:auto;';
 
     const summaryText = memory.summarize();
     const events = memory.recent(15);
@@ -244,7 +265,8 @@ export class UIOverlay {
     document.body.appendChild(overlay);
     this.activeModal = overlay;
 
-    modal.querySelector('.yg-modal-close')?.addEventListener('click', () => {
+    modal.querySelector('.yg-modal-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       overlay.remove();
       this.activeModal = null;
     });
@@ -259,7 +281,8 @@ export class UIOverlay {
     const submitBtn = modal.querySelector('#yg-journal-submit');
     const input = modal.querySelector('#yg-journal-input') as HTMLInputElement;
 
-    const handleRecord = () => {
+    const handleRecord = (e: Event) => {
+      e.stopPropagation();
       const val = input.value.trim();
       if (val) {
         this.callbacks.onAddJournal(val);
@@ -271,7 +294,7 @@ export class UIOverlay {
 
     submitBtn?.addEventListener('click', handleRecord);
     input?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleRecord();
+      if (e.key === 'Enter') handleRecord(e);
     });
   }
 
@@ -281,15 +304,15 @@ export class UIOverlay {
     const overlay = document.createElement('div');
     overlay.className = 'yg-modal-overlay';
     overlay.style.cssText =
-      'position:fixed;inset:0;z-index:50;background:rgba(10,12,10,0.72);' +
-      'backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+      'position:fixed;inset:0;z-index:150;background:rgba(10,12,10,0.72);' +
+      'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
 
     const modal = document.createElement('div');
     modal.className = 'yg-modal-card';
     modal.style.cssText =
       'max-width:28rem;width:100%;padding:1.5rem;' +
       'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
-      'border-radius:1.2rem;box-shadow:0 24px 60px rgba(0,0,0,0.5);';
+      'border-radius:1.2rem;box-shadow:0 24px 60px rgba(0,0,0,0.5);pointer-events:auto;';
 
     modal.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
@@ -325,7 +348,8 @@ export class UIOverlay {
     document.body.appendChild(overlay);
     this.activeModal = overlay;
 
-    modal.querySelector('.yg-modal-close')?.addEventListener('click', () => {
+    modal.querySelector('.yg-modal-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       overlay.remove();
       this.activeModal = null;
     });
@@ -337,17 +361,20 @@ export class UIOverlay {
       }
     });
 
-    modal.querySelector('#yg-toggle-lamp')?.addEventListener('click', () => {
+    modal.querySelector('#yg-toggle-lamp')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       const nextLamp = this.callbacks.onToggleLamp();
       this.renderSettingsModal(nextLamp, audioMuted);
     });
 
-    modal.querySelector('#yg-toggle-audio')?.addEventListener('click', () => {
+    modal.querySelector('#yg-toggle-audio')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       const nextAudio = this.callbacks.onToggleAudio();
       this.renderSettingsModal(lampOn, nextAudio);
     });
 
-    modal.querySelector('#yg-reset-data')?.addEventListener('click', () => {
+    modal.querySelector('#yg-reset-data')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (confirm('Are you sure you want to reset your sanctuary data?')) {
         this.callbacks.onResetData();
       }
