@@ -1,11 +1,10 @@
 /**
  * YearGlass Sanctuary — Camera Controller
  *
- * Aspect-aware camera matrix calculation normalized for high-DPI (Retina) viewports.
- * Uses logical CSS dimensions exclusively (`clientWidth`/`innerHeight`) so DPR 2x/3x screens
- * never scale the camera by 2x/3x.
- * On portrait mobile (375x812, aspect < 1.0), ROOM_VIEW_SCALE produces a dome radius
- * that occupies <= 25-28% of CSS viewport height in Room View.
+ * Aspect-aware camera scale matrix for portrait mobile and desktop viewports.
+ * Direct scale factors:
+ *   - Mobile Portrait (aspect < 1.0): Room View = 0.20, Focus Mode = 0.50
+ *   - Desktop / Landscape:           Room View = 0.38, Focus Mode = 0.85
  */
 
 export interface CameraView {
@@ -20,7 +19,10 @@ const IDLE_LIGHT = 0.35;
 const ACTIVE_LIGHT = 0.95;
 
 export const ROOM_VIEW_SCALE = 0.35;
-export const FOCUS_VIEW_SCALE = 1.8;
+export const PORTRAIT_ROOM_SCALE = 0.20;
+export const PORTRAIT_FOCUS_SCALE = 0.50;
+export const DESKTOP_ROOM_SCALE = 0.38;
+export const DESKTOP_FOCUS_SCALE = 0.85;
 
 export class CameraController {
   private view: CameraView = { zoom: 1.0, offsetX: 0, offsetY: 0, focusMode: false };
@@ -79,35 +81,43 @@ export class CameraController {
   }
 
   get effectiveRoomScale(): number {
-    const cssWidth = this.viewport.width;
-    const cssHeight = this.viewport.height;
-    const aspect = cssWidth / Math.max(1, cssHeight);
-    const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
-    return ROOM_VIEW_SCALE * portraitFactor;
+    const aspect = this.viewport.width / Math.max(1, this.viewport.height);
+    return aspect < 1.0 ? PORTRAIT_ROOM_SCALE : DESKTOP_ROOM_SCALE;
+  }
+
+  get targetScaleFactor(): number {
+    const aspect = this.viewport.width / Math.max(1, this.viewport.height);
+    const isPortrait = aspect < 1.0;
+
+    if (this.isFocused) {
+      return isPortrait ? PORTRAIT_FOCUS_SCALE : DESKTOP_FOCUS_SCALE;
+    }
+    return isPortrait ? PORTRAIT_ROOM_SCALE : DESKTOP_ROOM_SCALE;
+  }
+
+  get currentScaleFactor(): number {
+    const roomScale = this.viewport.width / Math.max(1, this.viewport.height) < 1.0 ? PORTRAIT_ROOM_SCALE : DESKTOP_ROOM_SCALE;
+    return this.view.zoom * roomScale;
   }
 
   private computeTargets(): void {
     const { width, height } = this.viewport;
     const aspect = width / Math.max(1, height);
     const isMobile = width < MOBILE_BREAKPOINT || aspect < 1.2;
-    const roomScale = this.effectiveRoomScale;
+
+    const roomScale = aspect < 1.0 ? PORTRAIT_ROOM_SCALE : DESKTOP_ROOM_SCALE;
+    const focusScale = aspect < 1.0 ? PORTRAIT_FOCUS_SCALE : DESKTOP_FOCUS_SCALE;
 
     if (this.target.focusMode) {
-      this.target.zoom = isMobile ? (FOCUS_VIEW_SCALE / roomScale) * 1.05 : (FOCUS_VIEW_SCALE / roomScale);
+      this.target.zoom = focusScale / roomScale;
       this.target.offsetX = 0;
       this.target.offsetY = 0;
       return;
     }
 
-    if (isMobile) {
-      this.target.zoom = 1.0;
-      this.target.offsetX = 0;
-      this.target.offsetY = -0.03;
-    } else {
-      this.target.zoom = 1.0;
-      this.target.offsetX = 0;
-      this.target.offsetY = -0.05;
-    }
+    this.target.zoom = 1.0;
+    this.target.offsetX = 0;
+    this.target.offsetY = isMobile ? -0.03 : -0.05;
   }
 
   computeDesktop(): void {
@@ -151,12 +161,11 @@ export class CameraController {
     return this.target.focusMode || this.view.focusMode;
   }
 
-  get currentScaleFactor(): number {
-    return this.view.zoom * this.effectiveRoomScale;
-  }
-
   update(dt: number): void {
     const isFocused = this.target.focusMode || this.view.focusMode;
+    const aspect = this.viewport.width / Math.max(1, this.viewport.height);
+    const roomScale = aspect < 1.0 ? PORTRAIT_ROOM_SCALE : DESKTOP_ROOM_SCALE;
+    const focusScale = aspect < 1.0 ? PORTRAIT_FOCUS_SCALE : DESKTOP_FOCUS_SCALE;
 
     if (!isFocused) {
       this.target.focusMode = false;
@@ -165,8 +174,7 @@ export class CameraController {
       this.target.offsetY = 0;
     }
 
-    const roomScale = this.effectiveRoomScale;
-    const targetZoom = isFocused ? (FOCUS_VIEW_SCALE / roomScale) : 1.0;
+    const targetZoom = isFocused ? (focusScale / roomScale) : 1.0;
     const k = Math.min(1, dt * 8.0);
 
     this.view.zoom += (targetZoom - this.view.zoom) * k;

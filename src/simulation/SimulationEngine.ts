@@ -84,7 +84,8 @@ export class SimulationEngine {
       container,
       this.camera,
       (dt) => this.frame(dt),
-      (normX, normY) => this.handleDomeTap(normX, normY)
+      (normX, normY) => this.handleDomeTap(normX, normY),
+      () => this.exitFocus()
     );
 
     this.pipeline.start();

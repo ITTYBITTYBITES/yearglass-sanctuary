@@ -3,8 +3,8 @@
  *
  * Runs requestAnimationFrame loop at 60 FPS while active, reactively throttling
  * down to ~12 FPS after inactivity.
- * Integrates pointer/touch dome hit-testing (`onDomeTap`) and tab visibility
- * event loop restoration (`visibilitychange`).
+ * Integrates pointer/touch dome hit-testing (`onDomeTap`), background tap exit,
+ * and tab visibility event loop restoration (`visibilitychange`).
  */
 
 import { TerrariumScene, DomeHitResult } from './TerrariumScene';
@@ -16,12 +16,14 @@ const IDLE_THROTTLE_MS = 30_000;
 
 type FrameCallback = (dtSeconds: number) => void;
 type DomeTapCallback = (normX: number, normY: number) => void;
+type BackgroundTapCallback = () => void;
 
 export class RenderPipeline {
   readonly scene: TerrariumScene;
   readonly camera: CameraController;
   private readonly onFrame: FrameCallback;
   private onDomeTapCallback: DomeTapCallback | null = null;
+  private onBackgroundTapCallback: BackgroundTapCallback | null = null;
 
   private rafId = 0;
   private throttleId = 0;
@@ -36,17 +38,23 @@ export class RenderPipeline {
     container: HTMLElement,
     camera: CameraController,
     onFrame: FrameCallback,
-    onDomeTap?: DomeTapCallback
+    onDomeTap?: DomeTapCallback,
+    onBackgroundTap?: BackgroundTapCallback
   ) {
     this.scene = new TerrariumScene(container);
     this.camera = camera;
     this.onFrame = onFrame;
     if (onDomeTap) this.onDomeTapCallback = onDomeTap;
+    if (onBackgroundTap) this.onBackgroundTapCallback = onBackgroundTap;
     this.lastInteraction = performance.now();
   }
 
   setOnDomeTap(cb: DomeTapCallback): void {
     this.onDomeTapCallback = cb;
+  }
+
+  setOnBackgroundTap(cb: BackgroundTapCallback): void {
+    this.onBackgroundTapCallback = cb;
   }
 
   private readonly onPointer = (ev: Event) => {
@@ -69,6 +77,10 @@ export class RenderPipeline {
       this.scene.triggerRipple(hitResult.normX, hitResult.normY);
       if (this.onDomeTapCallback) {
         this.onDomeTapCallback(hitResult.normX, hitResult.normY);
+      }
+    } else if (this.camera.isFocused) {
+      if (this.onBackgroundTapCallback) {
+        this.onBackgroundTapCallback();
       }
     }
   };
@@ -106,7 +118,6 @@ export class RenderPipeline {
     register(gestureTarget, 'click', this.onTapOrClick as EventListener, false);
     register(gestureTarget, 'touchend', this.onTapOrClick as EventListener, false);
 
-    // Tab visibility change listener: resume tick loop when tab returns to foreground
     const onVisibilityChange = () => {
       if (typeof document !== 'undefined' && !document.hidden && this.running) {
         this.wake();
