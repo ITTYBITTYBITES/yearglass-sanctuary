@@ -1,6 +1,41 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('Critical App Error:', e);
+        showFallbackUI(e.message);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled Promise Rejection:', e);
+        showFallbackUI(e.reason ? (e.reason.message || e.reason) : 'Promise rejection');
+      });
+      function showFallbackUI(msg) {
+        var app = document.getElementById('app') || document.body;
+        if (!document.getElementById('error-fallback')) {
+          app.innerHTML = `
+            <div id="error-fallback" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;background:#1a1a1a;color:#fdfbf7;font-family:sans-serif;text-align:center;padding:20px;">
+              <h2>Sanctuary Initializing...</h2>
+              <p style="opacity:0.8;max-width:400px;margin:10px 0 20px;">An update was applied or the display renderer is restarting.</p>
+              <button onclick="clearCacheAndReload()" style="padding:12px 24px;background:#fdfbf7;color:#1a1a1a;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">Reload Sanctuary</button>
+            </div>
+          `;
+        }
+      }
+      function clearCacheAndReload() {
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            names.forEach(function(name) { caches.delete(name); });
+          });
+        }
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(reg) { reg.unregister(); });
+          });
+        }
+        window.location.reload(true);
+      }
+    </script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"

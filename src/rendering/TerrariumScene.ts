@@ -47,8 +47,8 @@ export class TerrariumScene {
   private readonly canvas: HTMLCanvasElement;
   private readonly sceneCanvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D | null;
-  private readonly gl: WebGL2RenderingContext | null;
-  private readonly program: GlassProgram | null;
+  private gl: WebGL2RenderingContext | null;
+  private program: GlassProgram | null;
   private readonly sceneTexture: WebGLTexture | null;
   private readonly quad: WebGLBuffer | null;
 
@@ -87,8 +87,16 @@ export class TerrariumScene {
     this.sceneCanvas = document.createElement('canvas');
     this.ctx = this.sceneCanvas.getContext('2d');
 
-    this.gl = this.canvas.getContext('webgl2') as WebGL2RenderingContext | null;
+    const hasWebGL = typeof window !== 'undefined' && typeof window.WebGLRenderingContext !== 'undefined';
+    this.gl = hasWebGL ? (this.canvas.getContext('webgl2') as WebGL2RenderingContext | null) : null;
     this.uniforms = { ...DEFAULT_GLASS_UNIFORMS };
+
+    this.canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      console.warn('[YearGlass] WebGL context lost — falling back to Canvas 2D');
+      this.gl = null;
+      this.program = null;
+    }, false);
 
     this.program = this.gl ? GlassProgram.create(this.gl) : null;
     if (this.gl && this.program) {
