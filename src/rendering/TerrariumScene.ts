@@ -229,12 +229,10 @@ export class TerrariumScene {
     const cx = cssWidth / 2;
     const isMobile = cssWidth <= 600;
 
-    const DESK_TOP_Y = visibleHeight * 0.62;
-    const DESK_DEPTH = isMobile ? 62 : 78;
-    const DESK_FRONT_Y = DESK_TOP_Y + DESK_DEPTH;
-    const DESK_SURFACE_Y = DESK_FRONT_Y - 10;
+    const DESK_FRONT_Y = visibleHeight * (isMobile ? 0.92 : 0.94);
+    const DESK_SURFACE_Y = DESK_FRONT_Y - 20;
 
-    const clocheW = Math.min(cssWidth * (isMobile ? 0.36 : 0.38), 240);
+    const clocheW = Math.min(cssWidth * (isMobile ? 0.38 : 0.38), 240);
     const clocheH = clocheW * 0.68;
 
     const roomCy = DESK_SURFACE_Y - clocheH / 2;
@@ -258,7 +256,7 @@ export class TerrariumScene {
 
     // Interactive desk props active in Room View (when not zoomed into Focus Mode)
     if (!this.isFocused && focusProgress < 0.2) {
-      const minPadding = isMobile ? 45 : 60;
+      const minPadding = isMobile ? 44 : 60;
       const lampX = Math.max(18, cssWidth * 0.08);
       const mugX = Math.max(lampX + minPadding, cx - clocheW * 0.76);
       const radioX = Math.max(mugX + minPadding, cx - clocheW * 0.48);
@@ -294,18 +292,18 @@ export class TerrariumScene {
 
       // 7. Window (Centered Wall)
       const windowW = isMobile ? Math.min(cssWidth * 0.52, 220) : Math.min(cssWidth * 0.42, 340);
-      const windowH = isMobile ? Math.min(visibleHeight * 0.32, 170) : Math.min(visibleHeight * 0.38, 240);
+      const windowH = isMobile ? Math.min(visibleHeight * 0.30, 160) : Math.min(visibleHeight * 0.36, 230);
       const shelfX = Math.max(10, cssWidth * 0.03);
-      const shelfW = isMobile ? Math.min(cssWidth * 0.18, 90) : Math.min(cssWidth * 0.22, 150);
+      const shelfW = isMobile ? Math.min(cssWidth * 0.18, 85) : Math.min(cssWidth * 0.22, 150);
       const windowX = Math.max((cssWidth - windowW) / 2, shelfX + shelfW + 18);
-      const windowY = Math.max(16, visibleHeight * 0.08);
+      const windowY = Math.max(12, visibleHeight * 0.06);
 
       if (x >= windowX && x <= windowX + windowW && y >= windowY && y <= windowY + windowH) {
         return { type: 'window', normX: 0, normY: 0 };
       }
 
       // 8. Shelves (Left Wall)
-      if (x >= shelfX - 10 && x <= shelfX + shelfW + 10 && y >= visibleHeight * 0.18 && y <= visibleHeight * 0.45) {
+      if (x >= shelfX - 10 && x <= shelfX + shelfW + 10 && y >= visibleHeight * 0.16 && y <= visibleHeight * 0.42) {
         return { type: 'shelf', normX: 0, normY: 0 };
       }
     }
@@ -418,10 +416,8 @@ export class TerrariumScene {
     const visibleHeight = Math.max(100, cssHeight - 210);
     const isMobile = cssWidth <= 600;
 
-    const DESK_TOP_Y = visibleHeight * 0.62;
-    const DESK_DEPTH = isMobile ? 62 : 78;
-    const DESK_FRONT_Y = DESK_TOP_Y + DESK_DEPTH;
-    const DESK_SURFACE_Y = DESK_FRONT_Y - 10;
+    const DESK_FRONT_Y = visibleHeight * (isMobile ? 0.92 : 0.94);
+    const DESK_SURFACE_Y = DESK_FRONT_Y - 20;
 
     const activeFocus = this.isFocused || this.cameraZoom > 1.25;
 
@@ -437,12 +433,12 @@ export class TerrariumScene {
       // === ROOM VIEW: Clear Bell Jar Glass Cloche resting flat on Wooden Tray Base ===
       const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
       const trayY = DESK_SURFACE_Y + this.cameraOffsetY * cssHeight; // Resting flat on DESK_SURFACE_Y
-      const domeW = Math.min(cssWidth * (isMobile ? 0.36 : 0.38), 240);
+      const domeW = Math.min(cssWidth * (isMobile ? 0.38 : 0.38), 240);
       const domeH = domeW * 0.68;
       const domeTopY = trayY - domeH;
 
       // 1. Soft Oval Grounding Contact Shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.40)';
       ctx.beginPath();
       ctx.ellipse(cx, trayY + 4, domeW * 0.54, 10, 0, 0, Math.PI * 2);
       ctx.fill();

@@ -2,13 +2,12 @@
  * YearGlass Sanctuary — Room Scene
  *
  * Real 3D Wooden Desk Surface Renderer:
- *   - DESK_TOP_Y = visibleHeight * 0.62 (Top edge where desk meets wall)
- *   - DESK_FRONT_Y = DESK_TOP_Y + (isMobile ? 60 : 75) (Front bevel plane edge)
- *   - DESK_SURFACE_Y = DESK_FRONT_Y - 10 (Official surface baseline where dome & props rest)
- *   - Rich warm oak/walnut top plane gradient (#5c3a21 to #4a2e19) with wood grain
- *   - Crisp 3D front bevel edge band with top highlight border
- *   - Under-desk drop shadow and grounded prop contact shadows (rgba(0,0,0,0.38))
- *   - Mobile-first non-overlapping wall layout (shelf clearance from window)
+ *   - DESK_TOP_Y = visibleHeight * 0.55 (Top edge where tabletop surface meets wall)
+ *   - DESK_FRONT_Y = visibleHeight * 0.92 (Front bevel edge near control drawer)
+ *   - DESK_SURFACE_Y = DESK_FRONT_Y - 20 (Official tabletop surface baseline)
+ *   - Deep, spacious 3D tabletop surface plane with rich warm oak/walnut gradient & wood grain
+ *   - Crisp 3D front bevel edge with highlight border & under-shadow
+ *   - All props & terrarium dome grounded on DESK_SURFACE_Y with contact shadows
  */
 
 export interface RoomState {
@@ -18,10 +17,9 @@ export interface RoomState {
 
 export function getDeskSurfaceY(height: number, width?: number): number {
   const visibleHeight = Math.max(100, height - 210);
-  const DESK_TOP_Y = visibleHeight * 0.62;
   const isMobile = width !== undefined ? width <= 600 : true;
-  const DESK_FRONT_Y = DESK_TOP_Y + (isMobile ? 60 : 75);
-  return DESK_FRONT_Y - 10;
+  const DESK_FRONT_Y = visibleHeight * (isMobile ? 0.92 : 0.94);
+  return DESK_FRONT_Y - 20;
 }
 
 export class RoomScene {
@@ -44,7 +42,7 @@ export class RoomScene {
     this.windowFrame = document.createElement('div');
     this.windowFrame.className = 'yearglass-room-window';
     this.windowFrame.style.cssText =
-      'position:absolute;top:8%;left:50%;transform:translateX(-50%);width:min(42%, 320px);height:min(32%, 220px);' +
+      'position:absolute;top:6%;left:50%;transform:translateX(-50%);width:min(44%, 320px);height:min(30%, 210px);' +
       'border-radius:10px;border:8px solid #6e472b;background:linear-gradient(180deg,#7b628a,#f0a85d,#fce4c6);' +
       'box-shadow:inset 0 0 25px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2);';
 
@@ -52,7 +50,7 @@ export class RoomScene {
     this.shelf = document.createElement('div');
     this.shelf.className = 'yearglass-room-shelf';
     this.shelf.style.cssText =
-      'position:absolute;top:22%;left:4%;width:min(22%, 160px);height:10px;' +
+      'position:absolute;top:18%;left:3%;width:min(20%, 150px);height:10px;' +
       'background:linear-gradient(180deg,#8b5a2b,#5c3a21);' +
       'border-bottom:2px solid #3d271d;box-shadow:0 6px 16px rgba(0,0,0,0.3);';
 
@@ -60,7 +58,7 @@ export class RoomScene {
     this.desk = document.createElement('div');
     this.desk.className = 'yearglass-room-desk';
     this.desk.style.cssText =
-      'position:absolute;bottom:0;left:0;right:0;width:100%;height:40%;' +
+      'position:absolute;bottom:0;left:0;right:0;width:100%;height:45%;' +
       'background:linear-gradient(180deg,#6e4c2e 0%,#3b2312 100%);' +
       'border-top:4px solid #a67c4e;' +
       'box-shadow:inset 0 4px 20px rgba(0,0,0,0.5), 0 -8px 24px rgba(0,0,0,0.3);';
@@ -122,10 +120,10 @@ export class RoomScene {
     const visibleHeight = Math.max(100, height - 210);
 
     // 3D Desk Geometry Constants
-    const DESK_TOP_Y = visibleHeight * 0.62;
-    const DESK_DEPTH = isPortrait ? 62 : 78;
-    const DESK_FRONT_Y = DESK_TOP_Y + DESK_DEPTH;
-    const DESK_SURFACE_Y = DESK_FRONT_Y - 10; // Official surface line where dome & props rest
+    const DESK_TOP_Y = visibleHeight * (isPortrait ? 0.55 : 0.58);
+    const DESK_FRONT_Y = visibleHeight * (isPortrait ? 0.92 : 0.94);
+    const DESK_DEPTH = DESK_FRONT_Y - DESK_TOP_Y;
+    const DESK_SURFACE_Y = DESK_FRONT_Y - 20; // Official surface line where dome & props rest
 
     const drawRectRounded = (
       c: CanvasRenderingContext2D,
@@ -175,13 +173,13 @@ export class RoomScene {
       ? Math.min(width * 0.52, 220)
       : Math.min(width * 0.42, 340);
     const windowHeight = isPortrait
-      ? Math.min(visibleHeight * 0.32, 170)
-      : Math.min(visibleHeight * 0.38, 240);
+      ? Math.min(visibleHeight * 0.30, 160)
+      : Math.min(visibleHeight * 0.36, 230);
 
     const shelfX = Math.max(10, width * 0.03);
-    const shelfW = isPortrait ? Math.min(width * 0.18, 90) : Math.min(width * 0.22, 150);
+    const shelfW = isPortrait ? Math.min(width * 0.18, 85) : Math.min(width * 0.22, 150);
     const windowX = Math.max((width - windowWidth) / 2, shelfX + shelfW + 18);
-    const windowY = Math.max(16, visibleHeight * 0.08);
+    const windowY = Math.max(12, visibleHeight * 0.06);
 
     // Window Outer Wooden Frame
     ctx.fillStyle = isNight ? '#4D301B' : '#6E472B';
@@ -258,8 +256,8 @@ export class RoomScene {
     ctx.fill();
 
     // 3. LEFT WALL FLOATING SHELVES & DECOR
-    const shelf1Y = visibleHeight * 0.18;
-    const shelf2Y = visibleHeight * 0.36;
+    const shelf1Y = visibleHeight * 0.16;
+    const shelf2Y = visibleHeight * 0.32;
 
     const drawPlank = (sx: number, sy: number, sw: number) => {
       ctx.fillStyle = '#8B5A2B';
@@ -328,7 +326,7 @@ export class RoomScene {
       const art1W = Math.min(width * 0.18, 120);
       const art1H = art1W * 0.75;
       const art1X = width - art1W - Math.max(16, width * 0.04);
-      const art1Y = visibleHeight * 0.16;
+      const art1Y = visibleHeight * 0.14;
 
       ctx.fillStyle = isNight ? '#4D301B' : '#6E472B';
       ctx.fillRect(art1X - 6, art1Y - 6, art1W + 12, art1H + 12);
@@ -379,16 +377,16 @@ export class RoomScene {
       }
     }
 
-    // 5. REAL 3D WOODEN DESK STRUCTURE (Top Depth Plane + Front Bevel + Under-Shadow)
+    // 5. REAL 3D WOODEN DESK STRUCTURE (Deep Surface Plane + Crisp Front Bevel + Under-Shadow)
     // A. Wall Contact Shadow Line along DESK_TOP_Y
     ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
-    ctx.fillRect(0, DESK_TOP_Y - 2, width, 2);
+    ctx.fillRect(0, DESK_TOP_Y - 2, width, 3);
 
-    // B. Top Surface Depth Plane (DESK_TOP_Y to DESK_FRONT_Y)
+    // B. Spacious Top Surface Depth Plane (DESK_TOP_Y to DESK_FRONT_Y)
     const topSurfaceGrad = ctx.createLinearGradient(0, DESK_TOP_Y, 0, DESK_FRONT_Y);
     if (isNight) {
       topSurfaceGrad.addColorStop(0, '#3D2516');
-      topSurfaceGrad.addColorStop(0.6, '#2D180C');
+      topSurfaceGrad.addColorStop(0.5, '#2D180C');
       topSurfaceGrad.addColorStop(1, '#201007');
     } else {
       topSurfaceGrad.addColorStop(0, '#7C5232');
@@ -398,19 +396,19 @@ export class RoomScene {
     ctx.fillStyle = topSurfaceGrad;
     ctx.fillRect(0, DESK_TOP_Y, width, DESK_DEPTH);
 
-    // Wood Grain Texture Lines on Tabletop
+    // Wood Grain Texture Lines on Tabletop Surface
     ctx.fillStyle = isNight ? 'rgba(0, 0, 0, 0.18)' : 'rgba(0, 0, 0, 0.12)';
-    for (let gy = DESK_TOP_Y + 8; gy < DESK_FRONT_Y - 2; gy += 12) {
+    for (let gy = DESK_TOP_Y + 12; gy < DESK_FRONT_Y - 4; gy += 16) {
       ctx.fillRect(0, gy, width, 1.5);
     }
     ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    for (let gy = DESK_TOP_Y + 4; gy < DESK_FRONT_Y - 2; gy += 18) {
+    for (let gy = DESK_TOP_Y + 6; gy < DESK_FRONT_Y - 4; gy += 24) {
       ctx.fillRect(0, gy, width, 1);
     }
 
     // C. Crisp 3D Front Bevel Edge (Lighter Highlight Border directly along DESK_FRONT_Y)
     ctx.fillStyle = isNight ? '#5C3A21' : '#A67C4E';
-    ctx.fillRect(0, DESK_FRONT_Y - 2, width, 3);
+    ctx.fillRect(0, DESK_FRONT_Y - 3, width, 4);
 
     // D. Front Face Trim Band (DESK_FRONT_Y down to height)
     const frontFaceGrad = ctx.createLinearGradient(0, DESK_FRONT_Y, 0, height);
@@ -433,12 +431,12 @@ export class RoomScene {
     ctx.fillStyle = underShadowGrad;
     ctx.fillRect(0, DESK_FRONT_Y + 1, width, 19);
 
-    // 6. ENLARGED DESK PROPS FIRMLY GROUNDED ON DESK_SURFACE_Y (With Grounding Contact Shadows)
+    // 6. DESK PROPS FIRMLY GROUNDED ON DESK_SURFACE_Y (With Grounding Contact Shadows)
     const cx = width / 2;
-    const propScale = isPortrait ? 2.0 : 1.0;
-    const clocheW = Math.min(width * (isPortrait ? 0.36 : 0.38), 240);
+    const propScale = isPortrait ? 1.8 : 1.0;
+    const clocheW = Math.min(width * (isPortrait ? 0.38 : 0.38), 240);
 
-    const minPadding = isPortrait ? 45 : 60;
+    const minPadding = isPortrait ? 44 : 60;
 
     // Helper for prop base contact shadows
     const drawContactShadow = (sx: number, sy: number, sw: number, sh = 6) => {
