@@ -2,8 +2,8 @@
  * YearGlass Sanctuary — UI Overlay System
  *
  * Consolidates all HUD controls and actions into a visible bottom drawer.
- * Provides direct, bidirectional View: Room / View: Focus controls, Journal modal,
- * Settings modal, Camera Snapshot Photo modal, and Desk Radio Station modal.
+ * Provides direct View: Room / View: Focus controls, top-centered notifications & toasts,
+ * Journal modal, Settings modal, Camera Snapshot Photo modal, and Radio Station modal.
  */
 
 import type { GrowthEvent } from '../simulation/GrowthSystem';
@@ -41,19 +41,20 @@ export class UIOverlay {
     this.uiContainer.className = 'yearglass-ui-overlay';
     this.uiContainer.style.cssText =
       'position:fixed;inset:0;pointer-events:none;z-index:9999;' +
-      'display:flex;flex-direction:column;justify-content:flex-end;padding:0;';
+      'display:flex;flex-direction:column;justify-content:space-between;padding:0;';
 
-    // Bottom Container for Toasts & Dialogue Cards
-    const bottomSlot = document.createElement('div');
-    bottomSlot.id = 'yg-bottom-slot';
-    bottomSlot.style.cssText =
-      'display:flex;flex-direction:column;align-items:center;gap:0.75rem;width:100%;' +
-      'margin-bottom:5.5rem;pointer-events:none;z-index:9999;';
+    // Top Container for Toasts, Dialogues & Notifications
+    const topSlot = document.createElement('div');
+    topSlot.id = 'yg-top-slot';
+    topSlot.style.cssText =
+      'position:fixed;top:max(16px, env(safe-area-inset-top));left:50%;transform:translateX(-50%);' +
+      'display:flex;flex-direction:column;align-items:center;gap:0.6rem;' +
+      'width:min(90%, 380px);pointer-events:none;z-index:9999;';
 
     // Visible Bottom Control Drawer
     this.mountBottomDrawer(container, day, moisture);
 
-    this.uiContainer.append(bottomSlot);
+    this.uiContainer.append(topSlot);
     container.appendChild(this.uiContainer);
   }
 
@@ -75,7 +76,7 @@ export class UIOverlay {
         </div>
         <div class="sanctuary-metrics" style="display:flex;align-items:center;justify-content:space-between;width:100%;font-size:0.88rem;font-weight:700;color:#1a1a1a;gap:0.5rem;flex-wrap:wrap;">
           <span id="yg-drawer-status">☀️ Day ${day} · 💧 ${Math.round(moisture * 100)}% Soil</span>
-          <span style="font-size:0.76rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">Sanctuary Controls</span>
+          <span style="font-size:0.76rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">SANCTUARY CONTROLS</span>
         </div>
       </div>
       <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.6rem;padding-top:0.4rem;">
@@ -159,23 +160,23 @@ export class UIOverlay {
   }
 
   showDialogueCard(title: string, message: string): void {
-    const slot = document.getElementById('yg-bottom-slot');
+    const slot = document.getElementById('yg-top-slot');
     if (!slot) return;
 
     const card = document.createElement('div');
-    card.className = 'yg-dialogue-card';
+    card.className = 'yg-dialogue-card prop-toast';
     card.style.cssText =
-      'pointer-events:auto;max-width:32rem;width:calc(100% - 2rem);padding:1rem 1.25rem;' +
-      'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
-      'border-radius:1rem;box-shadow:0 20px 50px rgba(0,0,0,0.45);' +
-      'font-family:system-ui,-apple-system,sans-serif;line-height:1.5;z-index:9999;';
+      'pointer-events:auto;width:min(90%, 360px);padding:0.85rem 1.1rem;' +
+      'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.6);' +
+      'border-radius:1rem;box-shadow:0 12px 36px rgba(0,0,0,0.4);' +
+      'font-family:system-ui,-apple-system,sans-serif;line-height:1.45;z-index:9999;';
 
     card.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
-        <h4 style="margin:0;font-size:1rem;font-weight:800;color:#111111;">${title}</h4>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.3rem;">
+        <h4 style="margin:0;font-size:0.95rem;font-weight:800;color:#111111;">${title}</h4>
         <button class="yg-close-btn" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#333;padding:0.2rem 0.4rem;min-height:36px;" aria-label="Close">✕</button>
       </div>
-      <p style="margin:0;font-size:0.92rem;color:#222222;font-weight:500;">${message}</p>
+      <p style="margin:0;font-size:0.88rem;color:#222222;font-weight:500;">${message}</p>
     `;
 
     card.querySelector('.yg-close-btn')?.addEventListener('click', (e) => {
@@ -188,30 +189,30 @@ export class UIOverlay {
 
     setTimeout(() => {
       if (card.parentNode) card.remove();
-    }, 8000);
+    }, 7000);
   }
 
   showEvolutionPopup(event: GrowthEvent): void {
-    const slot = document.getElementById('yg-bottom-slot');
+    const slot = document.getElementById('yg-top-slot');
     if (!slot) return;
 
     const popup = document.createElement('div');
-    popup.className = 'yg-evolution-popup';
+    popup.className = 'yg-evolution-popup sanctuary-toast';
     popup.style.cssText =
-      'pointer-events:auto;max-width:30rem;width:calc(100% - 2rem);padding:1.1rem 1.35rem;' +
+      'pointer-events:auto;width:min(90%, 360px);padding:1rem 1.2rem;' +
       'background:linear-gradient(180deg, #fefdf9 0%, #f7f2ea 100%);color:#1a1a1a;' +
-      'border:2px solid #bfa06a;border-radius:1.1rem;box-shadow:0 20px 50px rgba(0,0,0,0.45);' +
-      'text-align:left;line-height:1.55;z-index:9999;';
+      'border:2px solid #bfa06a;border-radius:1.1rem;box-shadow:0 16px 40px rgba(0,0,0,0.45);' +
+      'text-align:left;line-height:1.5;z-index:9999;';
 
     popup.innerHTML = `
-      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
-        <span style="font-size:1.3rem;">🌿</span>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+        <span style="font-size:1.2rem;">🌿</span>
         <span style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#8a6a2a;">Ecosystem Evolution</span>
       </div>
-      <h3 style="margin:0 0 0.4rem;font-size:1.15rem;font-weight:800;color:#111111;">${event.stageName}</h3>
-      <p style="margin:0 0 0.75rem;font-size:0.92rem;color:#222222;">${event.message}</p>
+      <h3 style="margin:0 0 0.3rem;font-size:1.05rem;font-weight:800;color:#111111;">${event.stageName}</h3>
+      <p style="margin:0 0 0.6rem;font-size:0.88rem;color:#222222;">${event.message}</p>
       <div style="display:flex;justify-content:flex-end;">
-        <button class="yg-ack-btn" style="padding:0.45rem 1rem;background:#2e3f57;color:#fff;border:none;border-radius:999px;font-size:0.82rem;font-weight:700;cursor:pointer;min-height:38px;">Celebrate Growth</button>
+        <button class="yg-ack-btn" style="padding:0.4rem 0.9rem;background:#2e3f57;color:#fff;border:none;border-radius:999px;font-size:0.80rem;font-weight:700;cursor:pointer;min-height:36px;">Celebrate Growth</button>
       </div>
     `;
 
@@ -225,18 +226,18 @@ export class UIOverlay {
   }
 
   showToast(title: string, text: string): void {
-    const slot = document.getElementById('yg-bottom-slot');
+    const slot = document.getElementById('yg-top-slot');
     if (!slot) return;
 
     if (this.activeToast) this.activeToast.remove();
     window.clearTimeout(this.toastTimeout);
 
     const toast = document.createElement('div');
-    toast.className = 'yg-toast';
+    toast.className = 'yg-toast sanctuary-toast';
     toast.style.cssText =
-      'pointer-events:auto;padding:0.7rem 1.1rem;background:#fdfbf7;color:#1a1a1a;' +
-      'border:1px solid rgba(191,160,106,0.5);border-radius:999px;' +
-      'box-shadow:0 10px 28px rgba(0,0,0,0.3);font-size:0.88rem;font-weight:600;z-index:9999;';
+      'pointer-events:auto;width:min(90%, 360px);padding:0.65rem 1rem;background:#fdfbf7;color:#1a1a1a;' +
+      'border:1px solid rgba(191,160,106,0.6);border-radius:999px;' +
+      'box-shadow:0 10px 28px rgba(0,0,0,0.35);font-size:0.86rem;font-weight:600;text-align:center;z-index:9999;';
     toast.innerHTML = `<strong>${title}</strong> — ${text}`;
 
     this.activeToast = toast;
@@ -254,10 +255,11 @@ export class UIOverlay {
     if (this.activeModal) this.activeModal.remove();
 
     const overlay = document.createElement('div');
-    overlay.className = 'yg-modal-overlay';
+    overlay.className = 'radio-modal-overlay yg-modal-overlay';
     overlay.style.cssText =
-      'position:fixed;inset:0;z-index:99999;background:rgba(10,12,10,0.82);' +
-      'backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
+      'position:fixed !important;inset:0 !important;z-index:10000 !important;' +
+      'display:flex !important;align-items:center !important;justify-content:center !important;' +
+      'background:rgba(0,0,0,0.6) !important;backdrop-filter:blur(8px);padding:1.5rem;pointer-events:auto;';
 
     const modal = document.createElement('div');
     modal.className = 'yg-modal-card';
@@ -300,10 +302,15 @@ export class UIOverlay {
     modal.querySelector('.yg-modal-close-btn')?.addEventListener('click', closeHandler);
 
     overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (e.target === overlay) {
         overlay.remove();
         this.activeModal = null;
       }
+    });
+
+    modal.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
   }
 
@@ -311,10 +318,11 @@ export class UIOverlay {
     if (this.activeModal) this.activeModal.remove();
 
     const overlay = document.createElement('div');
-    overlay.className = 'yg-modal-overlay';
+    overlay.className = 'radio-modal-overlay yg-modal-overlay';
     overlay.style.cssText =
-      'position:fixed;inset:0;z-index:99999;background:rgba(10,12,10,0.78);' +
-      'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
+      'position:fixed !important;inset:0 !important;z-index:10000 !important;' +
+      'display:flex !important;align-items:center !important;justify-content:center !important;' +
+      'background:rgba(0,0,0,0.6) !important;backdrop-filter:blur(8px);padding:1.5rem;pointer-events:auto;';
 
     const modal = document.createElement('div');
     modal.className = 'yg-modal-card';
@@ -353,10 +361,15 @@ export class UIOverlay {
     });
 
     overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (e.target === overlay) {
         overlay.remove();
         this.activeModal = null;
       }
+    });
+
+    modal.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
 
     modal.querySelectorAll('.yg-radio-chan').forEach((btn) => {
@@ -380,10 +393,11 @@ export class UIOverlay {
     if (this.activeModal) this.activeModal.remove();
 
     const overlay = document.createElement('div');
-    overlay.className = 'yg-modal-overlay';
+    overlay.className = 'radio-modal-overlay yg-modal-overlay';
     overlay.style.cssText =
-      'position:fixed;inset:0;z-index:99999;background:rgba(10,12,10,0.72);' +
-      'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
+      'position:fixed !important;inset:0 !important;z-index:10000 !important;' +
+      'display:flex !important;align-items:center !important;justify-content:center !important;' +
+      'background:rgba(0,0,0,0.6) !important;backdrop-filter:blur(6px);padding:1.5rem;pointer-events:auto;';
 
     const modal = document.createElement('div');
     modal.className = 'yg-modal-card';
@@ -430,10 +444,15 @@ export class UIOverlay {
     });
 
     overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (e.target === overlay) {
         overlay.remove();
         this.activeModal = null;
       }
+    });
+
+    modal.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
 
     const submitBtn = modal.querySelector('#yg-journal-submit');
@@ -460,10 +479,11 @@ export class UIOverlay {
     if (this.activeModal) this.activeModal.remove();
 
     const overlay = document.createElement('div');
-    overlay.className = 'yg-modal-overlay';
+    overlay.className = 'radio-modal-overlay yg-modal-overlay';
     overlay.style.cssText =
-      'position:fixed;inset:0;z-index:99999;background:rgba(10,12,10,0.72);' +
-      'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
+      'position:fixed !important;inset:0 !important;z-index:10000 !important;' +
+      'display:flex !important;align-items:center !important;justify-content:center !important;' +
+      'background:rgba(0,0,0,0.6) !important;backdrop-filter:blur(6px);padding:1.5rem;pointer-events:auto;';
 
     const modal = document.createElement('div');
     modal.className = 'yg-modal-card';
@@ -513,10 +533,15 @@ export class UIOverlay {
     });
 
     overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (e.target === overlay) {
         overlay.remove();
         this.activeModal = null;
       }
+    });
+
+    modal.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
 
     modal.querySelector('#yg-toggle-lamp')?.addEventListener('click', (e) => {
