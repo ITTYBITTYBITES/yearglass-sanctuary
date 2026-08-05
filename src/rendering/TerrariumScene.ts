@@ -8,12 +8,16 @@
  *   Layer 2: Background Moss & Secondary Flora
  *   Layer 1: Inner Bioluminescence & Ambient Backlight
  *
+ * Integrates the side-profile RoomScene backdrop (wall, window, shelves, desk, lamp)
+ * placing the terrarium dome squarely on the desk surface in Room View.
+ *
  * Implements robust WebGL context loss recovery (`webglcontextrestored`) and
  * Canvas 2D fallback composition.
  */
 
 import { GlassProgram, DEFAULT_GLASS_UNIFORMS, GlassUniforms } from './shaders';
 import { ROOM_VIEW_SCALE } from './CameraController';
+import type { RoomScene } from './RoomScene';
 import type { PlantNode } from '../simulation/GrowthSystem';
 import type { PipObservation } from '../simulation/PipAI';
 
@@ -61,13 +65,27 @@ export class TerrariumScene {
   private disposed = false;
   private readonly onResize: () => void;
 
+  private roomScene: RoomScene | null = null;
   private plantNodes: PlantNode[] = [];
   private pipObservation: PipObservation | null = null;
   private soilMoisture = 0.8;
   private cameraZoom = 1.0;
+  private isFocused = false;
+  private cameraOffsetX = 0;
+  private cameraOffsetY = 0;
 
   setCameraZoom(zoom: number): void {
     this.cameraZoom = zoom;
+  }
+
+  setRoomScene(room: RoomScene): void {
+    this.roomScene = room;
+  }
+
+  setFocusState(isFocused: boolean, offsetX = 0, offsetY = 0): void {
+    this.isFocused = isFocused;
+    this.cameraOffsetX = offsetX;
+    this.cameraOffsetY = offsetY;
   }
 
   constructor(container: HTMLElement) {
@@ -180,9 +198,21 @@ export class TerrariumScene {
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
-    const cx = rect.width / 2;
-    const cy = rect.height / 2;
-    const r = Math.min(rect.width, rect.height) * 0.46;
+    const cssWidth = rect.width;
+    const cssHeight = rect.height;
+
+    const aspect = cssWidth / Math.max(1, cssHeight);
+    const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
+    const roomScale = ROOM_VIEW_SCALE * portraitFactor;
+    const baseScale = this.cameraZoom || 1.0;
+    const r = Math.min(cssWidth, cssHeight) * roomScale * baseScale;
+
+    const deskY = cssHeight * 0.67;
+    const roomCy = deskY - r * 0.88;
+    const focusCy = cssHeight * 0.48;
+    const focusProgress = Math.min(1, Math.max(0, (baseScale - 1.0) / 1.4));
+    const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
+    const cy = roomCy + (focusCy - roomCy) * focusProgress + this.cameraOffsetY * cssHeight;
 
     const dx = x - cx;
     const dy = y - cy;
@@ -245,7 +275,7 @@ export class TerrariumScene {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    gl.clearColor(0.03, 0.05, 0.04, 1);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     program.use();
@@ -299,8 +329,16 @@ export class TerrariumScene {
 
     const cssWidth = this.container.clientWidth || window.innerWidth || width;
     const cssHeight = this.container.clientHeight || window.innerHeight || height;
-    const cx = cssWidth / 2;
-    const cy = cssHeight / 2;
+
+    const activeFocus = this.isFocused || this.cameraZoom > 1.25;
+
+    // Layer 0: Side-Profile Room Backdrop (Wall, Window, Shelves, Desk, Lamp)
+    if (this.roomScene) {
+      this.roomScene.draw(ctx, cssWidth, cssHeight, activeFocus);
+    } else {
+      ctx.fillStyle = '#F3EFE6';
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
+    }
 
     const aspect = cssWidth / Math.max(1, cssHeight);
     const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
@@ -309,11 +347,22 @@ export class TerrariumScene {
     const baseScale = this.cameraZoom || 1.0;
     const r = Math.min(cssWidth, cssHeight) * roomScale * baseScale;
 
+    // Calculate dome center:
+    // In Room View, rest bottom of dome squarely on top of desk surface (deskY = cssHeight * 0.67)
+    // In Focus View, center dome near vertical middle (cssHeight * 0.48)
+    const deskY = cssHeight * 0.67;
+    const roomCy = deskY - r * 0.88;
+    const focusCy = cssHeight * 0.48;
+
+    const focusProgress = Math.min(1, Math.max(0, (baseScale - 1.0) / 1.4));
+    const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
+    const cy = roomCy + (focusCy - roomCy) * focusProgress + this.cameraOffsetY * cssHeight;
+
     // Layer 1: Bioluminescent Ambient Backlight inside dome
     const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
     bg.addColorStop(0, '#1c3e32');
     bg.addColorStop(0.7, '#122820');
-    bg.addColorStop(1, 'rgba(5, 12, 8, 0.85)');
+    bg.addColorStop(1, 'rgba(5, 12, 8, 0.92)');
     ctx.fillStyle = bg;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);

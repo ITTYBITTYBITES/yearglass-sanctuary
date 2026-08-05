@@ -88,6 +88,10 @@ export class SimulationEngine {
       () => this.exitFocus()
     );
 
+    if (this.room) {
+      this.pipeline.scene.setRoomScene(this.room);
+    }
+
     this.pipeline.start();
     this.audio.installGestureUnlock();
 
@@ -196,6 +200,11 @@ export class SimulationEngine {
     this.room?.update(dt, this.env.currentHours, this.clock.lampOn, this.camera.currentView.focusMode);
 
     if (this.pipeline) {
+      this.pipeline.scene.setFocusState(
+        this.camera.currentView.focusMode,
+        this.camera.currentView.offsetX,
+        this.camera.currentView.offsetY
+      );
       this.pipeline.scene.setSimulationData(
         this.growth.allPlants(),
         this.pip.observation,
