@@ -7,7 +7,17 @@
 
 import { SimulationEngine } from './simulation/SimulationEngine';
 
-const CURRENT_BUILD_VERSION = '1.0.3-20260805-v4';
+const CURRENT_BUILD_VERSION = '1.0.3-20260805-v5';
+
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    console.log('[YearGlass] Service worker updated — auto-reloading page');
+    window.location.reload();
+  });
+}
 
 async function hardBustCacheOnVersionMismatch(): Promise<void> {
   if (typeof window === 'undefined') return;
