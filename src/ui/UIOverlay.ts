@@ -9,6 +9,9 @@ import type { GrowthEvent } from '../simulation/GrowthSystem';
 import type { MemoryEngine } from '../simulation/MemoryEngine';
 
 export interface UIOverlayCallbacks {
+  isFocused: () => boolean;
+  onEnterFocus: () => void;
+  onExitFocus: () => void;
   onToggleFocus: () => boolean;
   onWater: () => string;
   onToggleLamp: () => boolean;
@@ -40,14 +43,12 @@ export class UIOverlay {
       'position:fixed;inset:0;pointer-events:none;z-index:9999;' +
       'display:flex;flex-direction:column;justify-content:flex-end;padding:0;';
 
-    // Bottom Container for Toasts & Dialogue Cards
     const bottomSlot = document.createElement('div');
     bottomSlot.id = 'yg-bottom-slot';
     bottomSlot.style.cssText =
       'display:flex;flex-direction:column;align-items:center;gap:0.75rem;width:100%;' +
       'margin-bottom:3.5rem;pointer-events:none;z-index:9999;';
 
-    // Consolidated Bottom Control Drawer
     this.mountBottomDrawer(container, day, moisture);
 
     this.uiContainer.append(bottomSlot);
@@ -73,8 +74,8 @@ export class UIOverlay {
         </div>
         <span style="font-size:0.78rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;">Controls ▴</span>
       </div>
-      <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:0.6rem;padding-top:0.5rem;">
-        <button id="yg-drawer-view-toggle" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">🖼️ View: Room</button>
+      <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.6rem;padding-top:0.5rem;">
+        <button id="yg-drawer-view-toggle" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">🔍 Inspect Terrarium</button>
         <button id="yg-drawer-water" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">💧 Water Plant</button>
         <button id="yg-drawer-journal" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">📖 Journal</button>
         <button id="yg-drawer-settings" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">⚙️ Settings</button>
@@ -97,13 +98,22 @@ export class UIOverlay {
     handle?.addEventListener('click', toggleDrawer, { passive: false });
 
     this.viewToggleBtn = this.bottomDrawer.querySelector('#yg-drawer-view-toggle') as HTMLButtonElement;
+    this.updateViewToggleLabel();
+
     this.viewToggleBtn?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.callbacks.onButtonTap?.();
-      this.isFocused = this.callbacks.onToggleFocus();
-      this.updateViewToggleLabel();
-      this.showToast(this.isFocused ? '🔍 Focus Mode Active' : '🖼️ Room View Active', this.isFocused ? 'Close-up terrarium inspection mode.' : 'Framed workspace desktop mode.');
+
+      if (this.callbacks.isFocused()) {
+        this.callbacks.onExitFocus();
+        this.setFocusState(false);
+        this.showToast('🖼️ Room View', 'Full room desktop view.');
+      } else {
+        this.callbacks.onEnterFocus();
+        this.setFocusState(true);
+        this.showToast('🔍 Focus Mode', 'Close-up terrarium inspection mode.');
+      }
     });
 
     this.bottomDrawer.querySelector('#yg-drawer-water')?.addEventListener('click', (e) => {
@@ -148,7 +158,7 @@ export class UIOverlay {
 
   private updateViewToggleLabel(): void {
     if (this.viewToggleBtn) {
-      this.viewToggleBtn.innerHTML = this.isFocused ? '🔍 View: Focus' : '🖼️ View: Room';
+      this.viewToggleBtn.innerHTML = this.isFocused ? '🖼️ Switch to Room View' : '🔍 Inspect Terrarium';
     }
   }
 

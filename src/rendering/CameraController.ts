@@ -42,7 +42,6 @@ export class CameraController {
     window.addEventListener('orientationchange', this.onResize, { passive: true });
   }
 
-  /** Strip any saved viewMode/focus/cameraScale from localStorage on boot. */
   private stripPersistentState(): void {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('cameraScale');
@@ -52,7 +51,6 @@ export class CameraController {
     }
   }
 
-  /** Hardcode initial state to ROOM view. */
   resetToRoomMode(): void {
     this.target.focusMode = false;
     this.target.zoom = 1.0;
@@ -94,9 +92,9 @@ export class CameraController {
       this.target.offsetX = 0;
       this.target.offsetY = -0.04;
     } else {
-      this.target.zoom = 1.05;
+      this.target.zoom = 1.0;
       this.target.offsetX = 0;
-      this.target.offsetY = -0.06;
+      this.target.offsetY = -0.05;
     }
   }
 

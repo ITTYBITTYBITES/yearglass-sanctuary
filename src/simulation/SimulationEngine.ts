@@ -250,6 +250,9 @@ export class SimulationEngine {
 
   private mountUIOverlay(container: HTMLElement): void {
     this.uiOverlay = new UIOverlay({
+      isFocused: () => this.isFocused(),
+      onEnterFocus: () => this.enterFocus(),
+      onExitFocus: () => this.exitFocus(),
       onButtonTap: () => this.audio.playButtonTap(),
       onToggleFocus: () => {
         const isFocused = this.camera.toggleFocus();
@@ -289,6 +292,10 @@ export class SimulationEngine {
     });
 
     this.uiOverlay.mount(container, this.memory.currentDay, this.growth.moisture);
+  }
+
+  isFocused(): boolean {
+    return this.camera.isFocused;
   }
 
   enterFocus(): void {
