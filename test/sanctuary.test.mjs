@@ -14,9 +14,9 @@ describe('YearGlass Standalone Sanctuary Test Suite', () => {
     assert.ok(pkg.dependencies.howler);
   });
 
-  it('vite.config.ts uses relative base path for GitHub Pages', () => {
+  it('vite.config.ts uses base path for GitHub Pages', () => {
     const viteConfig = fs.readFileSync(path.join(ROOT, 'vite.config.ts'), 'utf-8');
-    assert.ok(viteConfig.includes("base: './'"));
+    assert.ok(viteConfig.includes("base: '/yearglass-sanctuary/'") || viteConfig.includes("base: './'"));
     assert.ok(viteConfig.includes("skipWaiting: true"));
   });
 

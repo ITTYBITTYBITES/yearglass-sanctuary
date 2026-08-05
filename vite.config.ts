@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: './',
+  base: '/yearglass-sanctuary/',
   server: {
     host: '0.0.0.0',
     allowedHosts: true,
@@ -31,8 +31,8 @@ export default defineConfig({
         background_color: '#0d0d0e',
         display: 'standalone',
         orientation: 'any',
-        start_url: './',
-        scope: './',
+        start_url: '/yearglass-sanctuary/',
+        scope: '/yearglass-sanctuary/',
         icons: [
           {
             src: 'icons/icon-192.png',
