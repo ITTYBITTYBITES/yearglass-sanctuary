@@ -1,14 +1,12 @@
 /**
  * YearGlass Sanctuary — Procedural Web Audio Engine
  *
- * Fully procedural ambient soundscape using Web Audio API:
- *   - Rain: filtered noise through dynamic LFO bandpass
- *   - Birdsong: procedural FM chirps
- *   - Ambient hum: low sine drone + harmonic detune
- *   - Dome shimmer: rising arpeggio
- *
- * Automatically suspends Web Audio context when document/tab is hidden
- * and resumes when returning to foreground.
+ * Fully procedural ambient soundscape tuned to recommended specifications:
+ *   - Master Volume Cap: 0.8
+ *   - Ambient Gain: 0.20
+ *   - Radio Gain: 0.15
+ *   - Softer water drop & shimmer effects with no clipping
+ *   - Automatic Audio Suspension on tab/app hide (visibilitychange)
  */
 
 export type YearglassSound = 'rain' | 'bird' | 'hum' | 'shimmer';
@@ -22,6 +20,7 @@ export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private ambientGain: GainNode | null = null;
+  private radioGain: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private started = false;
   private disposed = false;
@@ -62,7 +61,7 @@ export class AudioEngine {
       if (!this.ctx) {
         this.ctx = new AC();
         this.master = this.ctx.createGain();
-        this.master.gain.value = 0.6;
+        this.master.gain.value = 0.80; // Master volume cap: 0.8
         this.master.connect(this.ctx.destination);
         this.buildNoiseBuffer();
       }
@@ -107,13 +106,20 @@ export class AudioEngine {
   startAmbient(): void {
     if (this.started || !this.ctx || !this.master) return;
     this.started = true;
+
+    // Ambient gain: 0.20
     this.ambientGain = this.ctx.createGain();
     this.ambientGain.gain.value = 0;
     this.ambientGain.connect(this.master);
 
+    // Radio gain: 0.15
+    this.radioGain = this.ctx.createGain();
+    this.radioGain.gain.value = 0.15;
+    this.radioGain.connect(this.master);
+
     this.startRain(this.ambientGain);
     this.startHum(this.ambientGain);
-    this.ambientGain.gain.linearRampToValueAtTime(0.55, this.ctx.currentTime + 3);
+    this.ambientGain.gain.linearRampToValueAtTime(0.20, this.ctx.currentTime + 2.5);
     this.scheduleBirds();
   }
 
@@ -136,6 +142,7 @@ export class AudioEngine {
       }, 900);
     }
     this.ambientGain = null;
+    this.radioGain = null;
   }
 
   private clearBirdTimer(): void {
@@ -154,7 +161,7 @@ export class AudioEngine {
     for (let i = 0; i < len; i++) {
       const white = Math.random() * 2 - 1;
       last = (last + 0.02 * white) / 1.02;
-      data[i] = last * 3.5;
+      data[i] = last * 2.8;
     }
     this.noiseBuffer = buffer;
   }
@@ -168,18 +175,18 @@ export class AudioEngine {
 
     const band = ctx.createBiquadFilter();
     band.type = 'bandpass';
-    band.frequency.value = 900;
-    band.Q.value = 0.6;
+    band.frequency.value = 850;
+    band.Q.value = 0.5;
 
     const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.13;
+    lfo.frequency.value = 0.12;
     const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 260;
+    lfoGain.gain.value = 220;
     lfo.connect(lfoGain);
     lfoGain.connect(band.frequency);
 
     const wet = ctx.createGain();
-    wet.gain.value = 0.4;
+    wet.gain.value = 0.25;
 
     source.connect(band);
     band.connect(wet);
@@ -212,7 +219,7 @@ export class AudioEngine {
     o2.type = 'sine';
     o2.frequency.value = 82.5;
     const g = ctx.createGain();
-    g.gain.value = 0.12;
+    g.gain.value = 0.08;
     o1.connect(g);
     o2.connect(g);
     g.connect(dest);
@@ -240,11 +247,11 @@ export class AudioEngine {
     this.clearBirdTimer();
     const chirp = () => {
       if (this.disposed || !this.ctx || !this.master) return;
-      this.playChirp(0.35 + Math.random() * 0.3);
+      this.playChirp(0.20 + Math.random() * 0.18);
     };
     const loop = () => {
       if (this.disposed || !this.ctx || !this.started) return;
-      const delay = 4000 + Math.random() * 7000;
+      const delay = 5000 + Math.random() * 8000;
       this.birdTimer = window.setTimeout(() => {
         if (this.disposed) return;
         this.birdTimer = 0;
@@ -258,24 +265,24 @@ export class AudioEngine {
   private playChirp(vol: number): void {
     const ctx = this.ctx as AudioContext;
     const t0 = ctx.currentTime;
-    const dur = 0.12 + Math.random() * 0.08;
+    const dur = 0.10 + Math.random() * 0.06;
 
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    const carrier = 2000 + Math.random() * 1600;
+    const carrier = 2000 + Math.random() * 1400;
     osc.frequency.setValueAtTime(carrier, t0);
-    osc.frequency.exponentialRampToValueAtTime(carrier * (0.85 + Math.random() * 0.3), t0 + dur);
+    osc.frequency.exponentialRampToValueAtTime(carrier * (0.88 + Math.random() * 0.25), t0 + dur);
 
     const mod = ctx.createOscillator();
-    mod.frequency.value = 40 + Math.random() * 60;
+    mod.frequency.value = 35 + Math.random() * 50;
     const modGain = ctx.createGain();
-    modGain.gain.value = carrier * 0.5;
+    modGain.gain.value = carrier * 0.4;
     mod.connect(modGain);
     modGain.connect(osc.frequency);
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
 
     osc.connect(g);
@@ -292,18 +299,18 @@ export class AudioEngine {
     const base = 523.25;
     const steps = [0, 4, 7, 12, 16];
     steps.forEach((st, i) => {
-      const t0 = ctx.currentTime + i * 0.11;
+      const t0 = ctx.currentTime + i * 0.10;
       const osc = ctx.createOscillator();
       osc.type = 'sine';
       osc.frequency.value = base * Math.pow(2, st / 12);
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
+      g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
       osc.connect(g);
       g.connect(this.master as GainNode);
       osc.start(t0);
-      osc.stop(t0 + 1);
+      osc.stop(t0 + 0.8);
     });
   }
 
@@ -313,16 +320,16 @@ export class AudioEngine {
     const t0 = ctx.currentTime;
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, t0);
-    osc.frequency.exponentialRampToValueAtTime(320, t0 + 0.12);
+    osc.frequency.setValueAtTime(750, t0);
+    osc.frequency.exponentialRampToValueAtTime(310, t0 + 0.10);
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
+    g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.012); // Softer water effects with no clipping
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
     osc.connect(g);
     g.connect(this.master as GainNode);
     osc.start(t0);
-    osc.stop(t0 + 0.15);
+    osc.stop(t0 + 0.14);
   }
 
   playButtonTap(): void {
@@ -331,16 +338,16 @@ export class AudioEngine {
     const t0 = ctx.currentTime;
     const osc = ctx.createOscillator();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(480, t0);
-    osc.frequency.exponentialRampToValueAtTime(240, t0 + 0.04);
+    osc.frequency.setValueAtTime(450, t0);
+    osc.frequency.exponentialRampToValueAtTime(220, t0 + 0.035);
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.15, t0 + 0.005);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+    g.gain.exponentialRampToValueAtTime(0.10, t0 + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
     osc.connect(g);
     g.connect(this.master as GainNode);
     osc.start(t0);
-    osc.stop(t0 + 0.05);
+    osc.stop(t0 + 0.045);
   }
 
   play(sound: YearglassSound): void {
@@ -370,6 +377,7 @@ export class AudioEngine {
     this.ctx = null;
     this.master = null;
     this.ambientGain = null;
+    this.radioGain = null;
     this.started = false;
   }
 }
