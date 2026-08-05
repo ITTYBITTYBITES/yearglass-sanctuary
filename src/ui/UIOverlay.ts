@@ -76,7 +76,7 @@ export class UIOverlay {
         <span style="font-size:0.78rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;">Sanctuary Controls</span>
       </div>
       <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.6rem;padding-top:0.4rem;">
-        <button id="yg-drawer-view-toggle" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">🔍 Inspect Terrarium</button>
+        <button id="yg-drawer-view-toggle" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">🔍 View: Focus</button>
         <button id="yg-drawer-water" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">💧 Water Plant</button>
         <button id="yg-drawer-journal" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">📖 Journal</button>
         <button id="yg-drawer-settings" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">⚙️ Settings</button>
@@ -124,7 +124,7 @@ export class UIOverlay {
       this.openSettingsSignal();
     });
 
-    container.appendChild(this.bottomDrawer);
+    (document.body || container).appendChild(this.bottomDrawer);
   }
 
   private openJournalSignal() {
@@ -144,7 +144,7 @@ export class UIOverlay {
 
   private updateViewToggleLabel(): void {
     if (this.viewToggleBtn) {
-      this.viewToggleBtn.innerHTML = this.isFocused ? '🖼️ Switch to Room View' : '🔍 Inspect Terrarium';
+      this.viewToggleBtn.innerHTML = this.isFocused ? '🖼️ View: Room' : '🔍 View: Focus';
     }
   }
 
