@@ -3,7 +3,7 @@
  *
  * Consolidates all HUD controls and actions into a visible bottom drawer.
  * Provides direct, bidirectional View: Room / View: Focus controls, Journal modal,
- * Settings modal, and Camera Snapshot Photo modal.
+ * Settings modal, Camera Snapshot Photo modal, and Desk Radio Station modal.
  */
 
 import type { GrowthEvent } from '../simulation/GrowthSystem';
@@ -302,6 +302,75 @@ export class UIOverlay {
         overlay.remove();
         this.activeModal = null;
       }
+    });
+  }
+
+  renderRadioModal(): void {
+    if (this.activeModal) this.activeModal.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'yg-modal-overlay';
+    overlay.style.cssText =
+      'position:fixed;inset:0;z-index:99999;background:rgba(10,12,10,0.78);' +
+      'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
+
+    const modal = document.createElement('div');
+    modal.className = 'yg-modal-card';
+    modal.style.cssText =
+      'max-width:28rem;width:100%;padding:1.35rem;' +
+      'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
+      'border-radius:1.2rem;box-shadow:0 24px 60px rgba(0,0,0,0.5);pointer-events:auto;';
+
+    modal.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;border-bottom:1px solid rgba(0,0,0,0.1);padding-bottom:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span style="font-size:1.3rem;">📻</span>
+          <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:#111111;">Desk Radio Stations</h3>
+        </div>
+        <button class="yg-modal-close" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#333;padding:0.2rem 0.5rem;" aria-label="Close modal">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <p style="margin:0;font-size:0.88rem;color:#444;font-weight:500;">Select an ambient station for your sanctuary environment:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-block:0.5rem;">
+          <button class="yg-radio-chan" data-channel="rain" style="padding:0.75rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.6rem;font-weight:700;cursor:pointer;text-align:left;color:#1a1a1a;">🌧️ Rain & Storm</button>
+          <button class="yg-radio-chan" data-channel="forest" style="padding:0.75rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.6rem;font-weight:700;cursor:pointer;text-align:left;color:#1a1a1a;">🌲 Quiet Forest</button>
+          <button class="yg-radio-chan" data-channel="lofi" style="padding:0.75rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.6rem;font-weight:700;cursor:pointer;text-align:left;color:#1a1a1a;">🎧 Lo-Fi Ambient</button>
+          <button class="yg-radio-chan" data-channel="crickets" style="padding:0.75rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.6rem;font-weight:700;cursor:pointer;text-align:left;color:#1a1a1a;">🌙 Night Crickets</button>
+        </div>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    this.activeModal = overlay;
+
+    modal.querySelector('.yg-modal-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      overlay.remove();
+      this.activeModal = null;
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        this.activeModal = null;
+      }
+    });
+
+    modal.querySelectorAll('.yg-radio-chan').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const chan = (btn as HTMLElement).dataset.channel;
+        const names: Record<string, string> = {
+          rain: 'Rain & Storm',
+          forest: 'Quiet Forest',
+          lofi: 'Lo-Fi Ambient',
+          crickets: 'Night Crickets',
+        };
+        this.showToast('📻 Radio Station Changed', `Playing: ${names[chan || ''] || 'Ambient'}`);
+        overlay.remove();
+        this.activeModal = null;
+      });
     });
   }
 

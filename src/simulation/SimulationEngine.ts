@@ -113,6 +113,10 @@ export class SimulationEngine {
           'Warm Coffee Mug',
           'The coffee is warm. A quiet steam rises into the sanctuary air.'
         );
+      } else if (prop === 'radio') {
+        if (this.uiOverlay) {
+          this.uiOverlay.renderRadioModal();
+        }
       } else if (prop === 'window') {
         this.env.advanceTime(3.0);
         this.uiOverlay?.showToast('🌅 Window View', 'Looking through the glass, daylight gently shifts.');

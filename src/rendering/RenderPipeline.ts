@@ -14,7 +14,7 @@ const HIGH_FPS = 1000 / 60;
 const IDLE_FPS = 1000 / 12;
 const IDLE_THROTTLE_MS = 30_000;
 
-export type PropType = 'camera' | 'journal' | 'lamp' | 'mug' | 'window' | 'shelf';
+export type PropType = 'camera' | 'journal' | 'lamp' | 'mug' | 'radio' | 'window' | 'shelf';
 
 type FrameCallback = (dtSeconds: number) => void;
 type DomeTapCallback = (normX: number, normY: number) => void;

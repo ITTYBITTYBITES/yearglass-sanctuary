@@ -9,9 +9,9 @@
  *   Layer 1: Inner Bioluminescence & Ambient Backlight
  *
  * Integrates the side-profile RoomScene backdrop (wall, window, shelves, desk, props)
- * rendering the terrarium as a clear bell-jar glass cloche resting on a wooden tray base in Room View.
+ * rendering the terrarium as a clear bell-jar glass cloche resting flat on a wooden tray base on the desk surface in Room View.
  *
- * Implements hit-testing for terrarium dome and interactive desk props (camera, journal, lamp, mug, window, shelf),
+ * Implements hit-testing for terrarium dome and interactive desk props (camera, journal, lamp, mug, radio, window, shelf),
  * and snapshot capture for Photo mode.
  *
  * Implements robust WebGL context loss recovery (`webglcontextrestored`) and
@@ -53,7 +53,7 @@ export interface DomeHitResult {
   normY: number;
 }
 
-export type SceneHitType = 'dome' | 'camera' | 'journal' | 'lamp' | 'mug' | 'window' | 'shelf' | 'none';
+export type SceneHitType = 'dome' | 'camera' | 'journal' | 'lamp' | 'mug' | 'radio' | 'window' | 'shelf' | 'none';
 
 export interface SceneHitResult {
   type: SceneHitType;
@@ -254,34 +254,41 @@ export class TerrariumScene {
     // Interactive desk props active in Room View
     if (!this.isFocused) {
       // 2. Camera (Far Right Desk)
-      const camX = Math.min(cssWidth - 45, cssWidth * 0.92);
-      const camY = deskY + 10;
-      if (Math.abs(x - camX) < 32 && Math.abs(y - camY) < 28) {
+      const camX = Math.min(cssWidth - 24, cx + (Math.min(cssWidth * 0.38, 240)) * 0.50 + 120);
+      const camY = deskY + 6;
+      if (Math.abs(x - camX) < 28 && Math.abs(y - camY) < 25) {
         return { type: 'camera', normX: 0, normY: 0 };
       }
 
       // 3. Journal & Hourglass (Right of Dome)
-      const clocheW = Math.min(cssWidth * 0.38, 260);
-      const journalX = cx + clocheW * 0.65;
-      const journalY = deskY + 6;
-      if (x >= journalX - 12 && x <= journalX + 160 && y >= journalY - 15 && y <= journalY + 55) {
+      const clocheW = Math.min(cssWidth * 0.38, 240);
+      const journalX = Math.min(cx + clocheW * 0.50, cssWidth * 0.65);
+      const journalY = deskY + 2;
+      if (x >= journalX - 10 && x <= journalX + 130 && y >= journalY - 15 && y <= journalY + 50) {
         return { type: 'journal', normX: 0, normY: 0 };
       }
 
       // 4. Coffee Mug (Left of Dome)
-      const lampX = Math.max(25, cssWidth * 0.16);
-      const mugX = Math.max(lampX + 35, cx - clocheW * 0.72);
-      const mugY = deskY + 10;
-      if (Math.abs(x - mugX) < 24 && Math.abs(y - mugY) < 28) {
+      const lampX = Math.max(18, cssWidth * 0.12);
+      const mugX = Math.max(lampX + 28, cx - clocheW * 0.76);
+      const mugY = deskY + 4;
+      if (Math.abs(x - mugX) < 22 && Math.abs(y - mugY) < 24) {
         return { type: 'mug', normX: 0, normY: 0 };
       }
 
-      // 5. Lamp (Left Desk)
-      if (Math.abs(x - lampX) < 38 && y >= deskY - cssHeight * 0.25 && y <= deskY + 20) {
+      // 5. Radio (Left of Dome)
+      const radioX = Math.max(mugX + 24, cx - clocheW * 0.55);
+      const radioY = deskY + 2;
+      if (Math.abs(x - radioX) < 24 && Math.abs(y - radioY) < 24) {
+        return { type: 'radio', normX: 0, normY: 0 };
+      }
+
+      // 6. Lamp (Left Desk)
+      if (Math.abs(x - lampX) < 35 && y >= deskY - cssHeight * 0.25 && y <= deskY + 20) {
         return { type: 'lamp', normX: 0, normY: 0 };
       }
 
-      // 6. Window (Centered Wall)
+      // 7. Window (Centered Wall)
       const windowW = Math.min(cssWidth * 0.44, 340);
       const windowH = Math.min(cssHeight * 0.34, 240);
       const windowX = (cssWidth - windowW) / 2;
@@ -290,7 +297,7 @@ export class TerrariumScene {
         return { type: 'window', normX: 0, normY: 0 };
       }
 
-      // 7. Shelves (Left Wall)
+      // 8. Shelves (Left Wall)
       const shelfX = Math.max(12, cssWidth * 0.04);
       const shelfW = Math.min(cssWidth * 0.22, 160);
       if (x >= shelfX - 10 && x <= shelfX + shelfW + 10 && y >= cssHeight * 0.20 && y <= cssHeight * 0.52) {
@@ -423,41 +430,42 @@ export class TerrariumScene {
     const deskY = cssHeight * 0.62;
 
     if (!activeFocus) {
-      // === ROOM VIEW: Clear Bell Jar Glass Cloche resting on Wooden Tray Base ===
+      // === ROOM VIEW: Clear Bell Jar Glass Cloche resting flat on Wooden Tray Base ===
       const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
-      const trayY = deskY + 4 + this.cameraOffsetY * cssHeight;
-      const domeW = Math.min(cssWidth * 0.38, 250);
+      const trayY = deskY + 2 + this.cameraOffsetY * cssHeight; // Sits flat on tabletop
+      const isMobile = cssWidth < 500;
+      const domeW = Math.min(cssWidth * (isMobile ? 0.36 : 0.38), 240);
       const domeH = domeW * 0.68;
       const domeTopY = trayY - domeH;
 
-      // 1. Wooden Pedestal / Tray Base on Desk Surface
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+      // 1. Wooden Pedestal / Tray Base flat on Desk Surface
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
       ctx.beginPath();
-      ctx.ellipse(cx, trayY + 4, domeW * 0.55, 10, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, trayY + 4, domeW * 0.52, 9, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Wooden Saucer Rim
       ctx.fillStyle = '#3D271D';
       ctx.beginPath();
-      ctx.ellipse(cx, trayY, domeW * 0.52, 9, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, trayY, domeW * 0.50, 8, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#5C3A21';
       ctx.beginPath();
-      ctx.ellipse(cx, trayY - 2, domeW * 0.50, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, trayY - 2, domeW * 0.48, 6, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // 2. Cloche Soil Bed & Luminous Bioluminescence
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(cx - domeW * 0.48, trayY - 2);
-      ctx.lineTo(cx - domeW * 0.48, trayY - domeH * 0.55);
+      ctx.moveTo(cx - domeW * 0.46, trayY - 2);
+      ctx.lineTo(cx - domeW * 0.46, trayY - domeH * 0.55);
       ctx.bezierCurveTo(
-        cx - domeW * 0.48, domeTopY,
-        cx + domeW * 0.48, domeTopY,
-        cx + domeW * 0.48, trayY - domeH * 0.55
+        cx - domeW * 0.46, domeTopY,
+        cx + domeW * 0.46, domeTopY,
+        cx + domeW * 0.46, trayY - domeH * 0.55
       );
-      ctx.lineTo(cx + domeW * 0.48, trayY - 2);
+      ctx.lineTo(cx + domeW * 0.46, trayY - 2);
       ctx.closePath();
       ctx.clip();
 
@@ -472,12 +480,12 @@ export class TerrariumScene {
       // Soil bed inside cloche
       ctx.fillStyle = this.soilMoisture > 0.4 ? '#284a37' : '#33382c';
       ctx.beginPath();
-      ctx.ellipse(cx, trayY - 4, domeW * 0.46, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, trayY - 4, domeW * 0.44, 11, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Plants inside Cloche
       for (const plant of this.plantNodes) {
-        const px = cx + (plant.x - 0.5) * domeW * 0.8;
+        const px = cx + (plant.x - 0.5) * domeW * 0.76;
         const py = trayY - 8 - plant.y * domeH * 0.5;
         const pSize = 10 + plant.growth * 22;
 
@@ -523,7 +531,7 @@ export class TerrariumScene {
 
       // Pip the Ladybug inside Cloche
       if (this.pipObservation) {
-        const pipX = cx + (this.pipObservation.x - 0.5) * domeW * 0.7;
+        const pipX = cx + (this.pipObservation.x - 0.5) * domeW * 0.68;
         const pipY = trayY - 10 - this.pipObservation.y * domeH * 0.45;
 
         ctx.save();
@@ -545,29 +553,29 @@ export class TerrariumScene {
       ctx.strokeStyle = 'rgba(188, 216, 238, 0.85)';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(cx - domeW * 0.48, trayY - 2);
-      ctx.lineTo(cx - domeW * 0.48, trayY - domeH * 0.55);
+      ctx.moveTo(cx - domeW * 0.46, trayY - 2);
+      ctx.lineTo(cx - domeW * 0.46, trayY - domeH * 0.55);
       ctx.bezierCurveTo(
-        cx - domeW * 0.48, domeTopY,
-        cx + domeW * 0.48, domeTopY,
-        cx + domeW * 0.48, trayY - domeH * 0.55
+        cx - domeW * 0.46, domeTopY,
+        cx + domeW * 0.46, domeTopY,
+        cx + domeW * 0.46, trayY - domeH * 0.55
       );
-      ctx.lineTo(cx + domeW * 0.48, trayY - 2);
+      ctx.lineTo(cx + domeW * 0.46, trayY - 2);
       ctx.stroke();
 
       // Glass Specular Curve Highlight along Left Arch
-      const specGrad = ctx.createLinearGradient(cx - domeW * 0.42, domeTopY, cx - domeW * 0.2, trayY);
+      const specGrad = ctx.createLinearGradient(cx - domeW * 0.40, domeTopY, cx - domeW * 0.18, trayY);
       specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
       specGrad.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
       ctx.strokeStyle = specGrad;
       ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.moveTo(cx - domeW * 0.42, trayY - domeH * 0.2);
-      ctx.lineTo(cx - domeW * 0.42, trayY - domeH * 0.55);
+      ctx.moveTo(cx - domeW * 0.40, trayY - domeH * 0.2);
+      ctx.lineTo(cx - domeW * 0.40, trayY - domeH * 0.55);
       ctx.bezierCurveTo(
-        cx - domeW * 0.42, domeTopY + 10,
-        cx - domeW * 0.2, domeTopY + 5,
-        cx - domeW * 0.1, domeTopY + 8
+        cx - domeW * 0.40, domeTopY + 10,
+        cx - domeW * 0.18, domeTopY + 5,
+        cx - domeW * 0.08, domeTopY + 8
       );
       ctx.stroke();
     } else {
