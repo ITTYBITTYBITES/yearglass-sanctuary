@@ -1,8 +1,8 @@
 /**
  * YearGlass Sanctuary — UI Overlay System
  *
- * Decoupled high-contrast UI overlay HUD and modal controllers.
- * Top control pills attach event listeners immediately upon DOM mount
+ * Decoupled high-contrast UI overlay HUD, Collapsible Bottom Drawer, and Modal Controllers.
+ * Top control pills and bottom drawer attach event listeners immediately upon DOM mount
  * independently of WebGL rendering state.
  */
 
@@ -16,13 +16,16 @@ export interface UIOverlayCallbacks {
   onToggleAudio: () => boolean;
   onResetData: () => void;
   onAddJournal: (note: string) => void;
+  onButtonTap?: () => void;
 }
 
 export class UIOverlay {
   private uiContainer: HTMLElement | null = null;
+  private bottomDrawer: HTMLElement | null = null;
   private activeModal: HTMLElement | null = null;
   private activeToast: HTMLElement | null = null;
   private toastTimeout = 0;
+  private isDrawerExpanded = false;
   private callbacks: UIOverlayCallbacks;
 
   constructor(callbacks: UIOverlayCallbacks) {
@@ -36,6 +39,7 @@ export class UIOverlay {
       'position:fixed;inset:0;pointer-events:none;z-index:9999;' +
       'display:flex;flex-direction:column;justify-content:space-between;padding:1rem;';
 
+    // Top Bar Controls
     const topBar = document.createElement('div');
     topBar.className = 'yearglass-top-bar';
     topBar.style.cssText =
@@ -58,6 +62,7 @@ export class UIOverlay {
     const handleBadgeClick = (e: Event) => {
       e.preventDefault();
       e.stopPropagation();
+      this.callbacks.onButtonTap?.();
       this.openJournalSignal();
     };
     statusBadge.addEventListener('pointerdown', handleBadgeClick, { passive: false });
@@ -83,6 +88,7 @@ export class UIOverlay {
       const handler = (e: Event) => {
         e.preventDefault();
         e.stopPropagation();
+        this.callbacks.onButtonTap?.();
         onClick(e);
       };
 
@@ -108,13 +114,85 @@ export class UIOverlay {
     actionRow.append(focusBtn, waterBtn, journalBtn, settingsBtn);
     topBar.append(statusBadge, actionRow);
 
+    // Bottom Container for Toasts, Dialogue Cards, and Collapsible Drawer
     const bottomSlot = document.createElement('div');
     bottomSlot.id = 'yg-bottom-slot';
     bottomSlot.style.cssText =
       'display:flex;flex-direction:column;align-items:center;gap:0.75rem;width:100%;pointer-events:none;';
 
+    // Collapsible Bottom Drawer
+    this.mountBottomDrawer(container);
+
     this.uiContainer.append(topBar, bottomSlot);
     container.appendChild(this.uiContainer);
+  }
+
+  private mountBottomDrawer(container: HTMLElement): void {
+    this.bottomDrawer = document.createElement('div');
+    this.bottomDrawer.id = 'yg-bottom-drawer';
+    this.bottomDrawer.className = 'yg-drawer-card';
+    this.bottomDrawer.style.cssText =
+      'position:fixed;bottom:0;left:0;right:0;z-index:90;pointer-events:auto;' +
+      'margin-bottom:0;padding:0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom));' +
+      'background:#fdfbf7;color:#1a1a1a;border-top:2px solid #bfa06a;' +
+      'border-radius:1.2rem 1.2rem 0 0;box-shadow:0 -12px 36px rgba(0,0,0,0.4);' +
+      'transform:translateY(calc(100% - 2.8rem));transition:transform 0.35s cubic-bezier(0.2,0.8,0.2,1);';
+
+    this.bottomDrawer.innerHTML = `
+      <div id="yg-drawer-handle" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;cursor:pointer;padding-bottom:0.6rem;user-select:none;touch-action:manipulation;">
+        <span style="width:36px;height:4px;background:#bfa06a;border-radius:999px;opacity:0.8;"></span>
+        <span style="font-size:0.82rem;font-weight:700;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;">Sanctuary Drawer</span>
+      </div>
+      <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.75rem;padding-top:0.5rem;">
+        <button id="yg-drawer-water" style="padding:0.7rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.5rem;justify-content:center;">💧 Water Plants</button>
+        <button id="yg-drawer-journal" style="padding:0.7rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.5rem;justify-content:center;">📖 View Journal</button>
+        <button id="yg-drawer-focus" style="padding:0.7rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.5rem;justify-content:center;">🔍 Toggle Focus</button>
+        <button id="yg-drawer-settings" style="padding:0.7rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.5rem;justify-content:center;">⚙️ Settings</button>
+      </div>
+    `;
+
+    const handle = this.bottomDrawer.querySelector('#yg-drawer-handle');
+    const toggleDrawer = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.callbacks.onButtonTap?.();
+      this.isDrawerExpanded = !this.isDrawerExpanded;
+      if (this.bottomDrawer) {
+        this.bottomDrawer.style.transform = this.isDrawerExpanded ? 'translateY(0)' : 'translateY(calc(100% - 2.8rem))';
+      }
+    };
+
+    handle?.addEventListener('pointerdown', toggleDrawer, { passive: false });
+    handle?.addEventListener('touchstart', toggleDrawer, { passive: false });
+    handle?.addEventListener('click', toggleDrawer, { passive: false });
+
+    this.bottomDrawer.querySelector('#yg-drawer-water')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.callbacks.onButtonTap?.();
+      const msg = this.callbacks.onWater();
+      this.showToast('💧 Terrarium Care', msg);
+    });
+
+    this.bottomDrawer.querySelector('#yg-drawer-journal')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.callbacks.onButtonTap?.();
+      this.openJournalSignal();
+    });
+
+    this.bottomDrawer.querySelector('#yg-drawer-focus')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.callbacks.onButtonTap?.();
+      const isFocused = this.callbacks.onToggleFocus();
+      this.showToast(isFocused ? '🔍 Focus Mode Active' : '🖼️ Room View', isFocused ? 'Close-up terrarium inspection mode.' : 'Framed workspace desktop mode.');
+    });
+
+    this.bottomDrawer.querySelector('#yg-drawer-settings')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.callbacks.onButtonTap?.();
+      this.openSettingsSignal();
+    });
+
+    container.appendChild(this.bottomDrawer);
   }
 
   private openJournalSignal() {
@@ -129,8 +207,9 @@ export class UIOverlay {
 
   updateStatus(day: number, moisture: number): void {
     const badge = document.getElementById('yg-status-badge');
-    if (!badge) return;
-    badge.innerHTML = `<span>☀️ Day ${day}</span> · <span>💧 ${Math.round(moisture * 100)}% Soil</span>`;
+    if (badge) {
+      badge.innerHTML = `<span>☀️ Day ${day}</span> · <span>💧 ${Math.round(moisture * 100)}% Soil</span>`;
+    }
   }
 
   showDialogueCard(title: string, message: string): void {
@@ -391,6 +470,7 @@ export class UIOverlay {
   destroy(): void {
     window.clearTimeout(this.toastTimeout);
     this.uiContainer?.remove();
+    this.bottomDrawer?.remove();
     this.activeModal?.remove();
   }
 }

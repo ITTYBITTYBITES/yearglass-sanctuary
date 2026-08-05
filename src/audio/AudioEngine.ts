@@ -285,10 +285,48 @@ export class AudioEngine {
     });
   }
 
+  playWaterDrop(): void {
+    const ctx = this.ctx as AudioContext;
+    if (!ctx || ctx.state !== 'running') return;
+    const t0 = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, t0);
+    osc.frequency.exponentialRampToValueAtTime(320, t0 + 0.12);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
+    osc.connect(g);
+    g.connect(this.master as GainNode);
+    osc.start(t0);
+    osc.stop(t0 + 0.15);
+  }
+
+  playButtonTap(): void {
+    const ctx = this.ctx as AudioContext;
+    if (!ctx || ctx.state !== 'running') return;
+    const t0 = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(480, t0);
+    osc.frequency.exponentialRampToValueAtTime(240, t0 + 0.04);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.15, t0 + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+    osc.connect(g);
+    g.connect(this.master as GainNode);
+    osc.start(t0);
+    osc.stop(t0 + 0.05);
+  }
+
   play(sound: YearglassSound): void {
     if (!this.ctx) return;
     if (sound === 'shimmer') {
       this.playShimmer();
+    } else if (sound === 'hum') {
+      this.playWaterDrop();
     }
   }
 
