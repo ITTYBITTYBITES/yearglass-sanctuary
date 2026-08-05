@@ -62,12 +62,21 @@
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
       }
-      #app, #yearglass-mount, canvas {
+      #app, #root, #yearglass-mount, .game-container, canvas {
         width: 100% !important;
         height: 100dvh !important;
         max-height: 100dvh !important;
         overflow: hidden !important;
         touch-action: none;
+      }
+      .yearglass-layer, .yearglass-room, .yearglass-ui-overlay {
+        pointer-events: none !important;
+      }
+      .yearglass-top-bar, .yg-hud-btn, .yg-btn-badge, .yg-dialogue-card,
+      .yg-evolution-popup, .yg-toast, .yg-modal-overlay, .yg-modal-card,
+      .yg-close-btn, .yg-ack-btn {
+        pointer-events: auto !important;
+        z-index: 100 !important;
       }
       [class*="card"], [class*="dialogue"], [class*="popup"] {
         background-color: #f7f2ea !important;

@@ -3,7 +3,8 @@
  *
  * Runs requestAnimationFrame loop at 60 FPS while active, reactively throttling
  * down to ~12 FPS after inactivity.
- * Integrates pointer/touch dome hit-testing (`onDomeTap`).
+ * Integrates pointer/touch dome hit-testing (`onDomeTap`) and tab visibility
+ * event loop restoration (`visibilitychange`).
  */
 
 import { TerrariumScene, DomeHitResult } from './TerrariumScene';
@@ -104,6 +105,18 @@ export class RenderPipeline {
 
     register(gestureTarget, 'click', this.onTapOrClick as EventListener, false);
     register(gestureTarget, 'touchend', this.onTapOrClick as EventListener, false);
+
+    // Tab visibility change listener: resume tick loop when tab returns to foreground
+    const onVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden && this.running) {
+        this.wake();
+        this.lastFrame = performance.now();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      this.listeners.push(() => document.removeEventListener('visibilitychange', onVisibilityChange));
+    }
 
     this.lastFrame = performance.now();
     this.rafId = requestAnimationFrame(this.tick);

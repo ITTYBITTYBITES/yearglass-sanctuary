@@ -7,6 +7,9 @@
  *   Layer 3: Active Stage (Pip FSM + primary growth nodes)
  *   Layer 2: Background Moss & Secondary Flora
  *   Layer 1: Inner Bioluminescence & Ambient Backlight
+ *
+ * Implements robust WebGL context loss recovery (`webglcontextrestored`) and
+ * Canvas 2D fallback composition.
  */
 
 import { GlassProgram, DEFAULT_GLASS_UNIFORMS, GlassUniforms } from './shaders';
@@ -47,10 +50,10 @@ export class TerrariumScene {
   private readonly canvas: HTMLCanvasElement;
   private readonly sceneCanvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D | null;
-  private gl: WebGL2RenderingContext | null;
-  private program: GlassProgram | null;
-  private readonly sceneTexture: WebGLTexture | null;
-  private readonly quad: WebGLBuffer | null;
+  private gl: WebGL2RenderingContext | null = null;
+  private program: GlassProgram | null = null;
+  private sceneTexture: WebGLTexture | null = null;
+  private quad: WebGLBuffer | null = null;
 
   private readonly uniforms: GlassUniforms;
   private size: SceneSize = { width: 320, height: 240, dpr: 1 };
@@ -87,28 +90,41 @@ export class TerrariumScene {
     this.sceneCanvas = document.createElement('canvas');
     this.ctx = this.sceneCanvas.getContext('2d');
 
-    const hasWebGL = typeof window !== 'undefined' && typeof window.WebGLRenderingContext !== 'undefined';
-    this.gl = hasWebGL ? (this.canvas.getContext('webgl2') as WebGL2RenderingContext | null) : null;
     this.uniforms = { ...DEFAULT_GLASS_UNIFORMS };
 
+    // WebGL Context Loss & Restoration Event Handlers
     this.canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
-      console.warn('[YearGlass] WebGL context lost — falling back to Canvas 2D');
+      console.warn('[YearGlass] WebGL context lost — switching to Canvas2D fallback');
       this.gl = null;
       this.program = null;
+      this.sceneTexture = null;
+      this.quad = null;
     }, false);
 
+    this.canvas.addEventListener('webglcontextrestored', (e) => {
+      e.preventDefault();
+      console.log('[YearGlass] WebGL context restored — rebuilding program & buffers');
+      this.initWebGL();
+    }, false);
+
+    this.initWebGL();
+    this.resize();
+  }
+
+  private initWebGL(): void {
+    const hasWebGL = typeof window !== 'undefined' && typeof window.WebGLRenderingContext !== 'undefined';
+    this.gl = hasWebGL ? (this.canvas.getContext('webgl2') as WebGL2RenderingContext | null) : null;
     this.program = this.gl ? GlassProgram.create(this.gl) : null;
+
     if (this.gl && this.program) {
-      const [sceneTexture, quad] = this.setupGL();
-      this.sceneTexture = sceneTexture;
+      const [texture, quad] = this.setupGL();
+      this.sceneTexture = texture;
       this.quad = quad;
     } else {
       this.sceneTexture = null;
       this.quad = null;
     }
-
-    this.resize();
   }
 
   private setupGL(): [WebGLTexture, WebGLBuffer] {
@@ -278,24 +294,27 @@ export class TerrariumScene {
     const cy = height / 2;
     const r = Math.min(width, height) * 0.42;
 
+    // Layer 1: Bioluminescent Ambient Backlight
     const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.3);
-    bg.addColorStop(0, '#12251e');
-    bg.addColorStop(0.7, '#081410');
-    bg.addColorStop(1, '#030605');
+    bg.addColorStop(0, '#1c3e32');
+    bg.addColorStop(0.55, '#122820');
+    bg.addColorStop(1, '#050c08');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.fillStyle = this.soilMoisture > 0.4 ? '#1f382b' : '#2b3026';
-    for (let i = 0; i < 22; i++) {
-      const a = (i / 22) * Math.PI * 2;
-      const d = (0.2 + (i % 5) * 0.12) * r;
+    // Layer 2: Background Moss & Soil Bed
+    ctx.fillStyle = this.soilMoisture > 0.4 ? '#284a37' : '#33382c';
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * Math.PI * 2;
+      const d = (0.18 + (i % 6) * 0.11) * r;
       const x = cx + Math.cos(a) * d;
       const y = cy + Math.sin(a) * d;
       ctx.beginPath();
-      ctx.arc(x, y, 3 + (i % 4) * 2, 0, Math.PI * 2);
+      ctx.arc(x, y, 3.5 + (i % 5) * 2.2, 0, Math.PI * 2);
       ctx.fill();
     }
 
+    // Layer 3: Flora & Plants
     for (const plant of this.plantNodes) {
       const px = cx + (plant.x - 0.5) * r * 1.2;
       const py = cy + (plant.y - 0.5) * r * 1.2;
@@ -305,42 +324,51 @@ export class TerrariumScene {
       ctx.translate(px, py);
 
       if (plant.species === 'moss') {
-        ctx.fillStyle = '#2e5a3c';
+        ctx.fillStyle = '#3a7a50';
         ctx.beginPath();
-        ctx.arc(0, 0, size * 0.6, 0, Math.PI * 2);
+        ctx.arc(0, 0, size * 0.65, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#529c6b';
+        ctx.beginPath();
+        ctx.arc(-size * 0.2, -size * 0.2, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
       } else if (plant.species === 'fern') {
-        ctx.strokeStyle = '#3e784f';
+        ctx.strokeStyle = '#438a58';
         ctx.lineWidth = 3;
         for (let frond = -2; frond <= 2; frond++) {
           ctx.beginPath();
           ctx.moveTo(0, 0);
-          ctx.quadraticCurveTo(frond * 8, -size * 0.8, frond * 12, -size);
+          ctx.quadraticCurveTo(frond * 9, -size * 0.85, frond * 14, -size * 1.1);
           ctx.stroke();
         }
       } else if (plant.species === 'orchid') {
-        ctx.strokeStyle = '#4a8058';
+        ctx.strokeStyle = '#4e8d5e';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(0, -size);
         ctx.stroke();
-        if (plant.growth > 0.4) {
-          ctx.fillStyle = '#d896a8';
+        if (plant.growth > 0.35) {
+          ctx.fillStyle = '#e6a2b8';
           ctx.beginPath();
-          ctx.arc(0, -size, 5 + plant.growth * 4, 0, Math.PI * 2);
+          ctx.arc(0, -size, 6 + plant.growth * 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#f4c0d0';
+          ctx.beginPath();
+          ctx.arc(0, -size, 2.5, 0, Math.PI * 2);
           ctx.fill();
         }
       } else if (plant.species === 'vine') {
-        ctx.strokeStyle = '#295438';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#326243';
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.arc(0, 0, size * 0.7, 0, Math.PI * 1.5);
+        ctx.arc(0, 0, size * 0.75, 0, Math.PI * 1.6);
         ctx.stroke();
       }
       ctx.restore();
     }
 
+    // Layer 4: Pip the Ladybug
     if (this.pipObservation) {
       const pipX = cx + (this.pipObservation.x - 0.5) * r * 1.1;
       const pipY = cy + (this.pipObservation.y - 0.5) * r * 1.1;
@@ -348,40 +376,56 @@ export class TerrariumScene {
       ctx.save();
       ctx.translate(pipX, pipY);
 
-      ctx.fillStyle = '#d94336';
+      // Shell & Glossy Highlight
+      ctx.fillStyle = '#e24838';
       ctx.beginPath();
-      ctx.arc(0, 0, 7, 0, Math.PI * 2);
+      ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#111111';
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
       ctx.beginPath();
-      ctx.arc(0, -5, 3.5, 0, Math.PI * 2);
+      ctx.arc(-2, -2, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
+      // Head & Antennae
       ctx.fillStyle = '#111111';
       ctx.beginPath();
-      ctx.arc(-2.5, -1, 1.2, 0, Math.PI * 2);
-      ctx.arc(2.5, -1, 1.2, 0, Math.PI * 2);
-      ctx.arc(0, 3, 1.2, 0, Math.PI * 2);
+      ctx.arc(0, -5.5, 3.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye dots
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-1.5, -6.5, 0.8, 0, Math.PI * 2);
+      ctx.arc(1.5, -6.5, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Spots
+      ctx.fillStyle = '#111111';
+      ctx.beginPath();
+      ctx.arc(-3, -1, 1.3, 0, Math.PI * 2);
+      ctx.arc(3, -1, 1.3, 0, Math.PI * 2);
+      ctx.arc(0, 3.2, 1.3, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
     }
 
-    ctx.strokeStyle = '#281e15';
+    // Layer 5: Glass Rim & Specular Gradient
+    ctx.strokeStyle = '#2d2218';
     ctx.lineWidth = Math.max(3, r * 0.07);
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(188, 216, 238, 0.55)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(188, 216, 238, 0.65)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
 
     const spec = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, 0, cx - r * 0.35, cy - r * 0.35, r * 0.45);
-    spec.addColorStop(0, 'rgba(255,255,255,0.22)');
+    spec.addColorStop(0, 'rgba(255,255,255,0.28)');
     spec.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = spec;
     ctx.fillRect(0, 0, width, height);
