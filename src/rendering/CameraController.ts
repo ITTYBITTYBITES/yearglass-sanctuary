@@ -2,9 +2,7 @@
  * YearGlass Sanctuary — Camera Controller
  *
  * Aspect-aware camera scale matrix for portrait mobile and desktop viewports.
- * Direct scale factors:
- *   - Mobile Portrait (aspect < 1.0): Room View = 0.20, Focus Mode = 0.50
- *   - Desktop / Landscape:           Room View = 0.38, Focus Mode = 0.85
+ * Aligns camera target offsets directly to room scene center origin (ROOM_SCENE_OFFSET_Y = -0.05).
  */
 
 export interface CameraView {
@@ -24,9 +22,11 @@ export const PORTRAIT_FOCUS_SCALE = 0.50;
 export const DESKTOP_ROOM_SCALE = 0.38;
 export const DESKTOP_FOCUS_SCALE = 0.85;
 
+export const ROOM_SCENE_OFFSET_Y = -0.05;
+
 export class CameraController {
-  private view: CameraView = { zoom: 1.0, offsetX: 0, offsetY: 0, focusMode: false };
-  private target: CameraView = { zoom: 1.0, offsetX: 0, offsetY: 0, focusMode: false };
+  private view: CameraView = { zoom: 1.0, offsetX: 0, offsetY: ROOM_SCENE_OFFSET_Y, focusMode: false };
+  private target: CameraView = { zoom: 1.0, offsetX: 0, offsetY: ROOM_SCENE_OFFSET_Y, focusMode: false };
   private light = IDLE_LIGHT;
   private reduced = false;
   private disposed = false;
@@ -63,12 +63,12 @@ export class CameraController {
     this.target.focusMode = false;
     this.target.zoom = 1.0;
     this.target.offsetX = 0;
-    this.target.offsetY = 0;
+    this.target.offsetY = ROOM_SCENE_OFFSET_Y;
 
     this.view.focusMode = false;
     this.view.zoom = 1.0;
     this.view.offsetX = 0;
-    this.view.offsetY = 0;
+    this.view.offsetY = ROOM_SCENE_OFFSET_Y;
 
     this.computeTargets();
   }
@@ -117,7 +117,7 @@ export class CameraController {
 
     this.target.zoom = 1.0;
     this.target.offsetX = 0;
-    this.target.offsetY = isMobile ? -0.03 : -0.05;
+    this.target.offsetY = isMobile ? -0.03 : ROOM_SCENE_OFFSET_Y;
   }
 
   computeDesktop(): void {
@@ -138,12 +138,16 @@ export class CameraController {
   exitFocus(): void {
     this.target.focusMode = false;
     this.view.focusMode = false;
+
+    // Target straight-on room framing origin (centers window, desk & shelf composition)
     this.target.zoom = 1.0;
-    this.view.zoom = 1.0;
     this.target.offsetX = 0;
-    this.target.offsetY = 0;
-    this.view.offsetX = 0;
-    this.view.offsetY = 0;
+    this.target.offsetY = ROOM_SCENE_OFFSET_Y;
+
+    this.view.zoom = 1.0;
+    this.view.offsetX = this.target.offsetX;
+    this.view.offsetY = this.target.offsetY;
+
     this.computeTargets();
   }
 
@@ -171,7 +175,7 @@ export class CameraController {
       this.target.focusMode = false;
       this.view.focusMode = false;
       this.target.offsetX = 0;
-      this.target.offsetY = 0;
+      this.target.offsetY = ROOM_SCENE_OFFSET_Y;
     }
 
     const targetZoom = isFocused ? (focusScale / roomScale) : 1.0;
