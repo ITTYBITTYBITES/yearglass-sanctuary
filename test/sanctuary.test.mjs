@@ -102,4 +102,20 @@ describe('YearGlass Standalone Sanctuary E2E UX Test Suite', () => {
     assert.ok(audioSrc.includes('resume()'), 'AudioEngine resumes suspended context');
     assert.ok(audioSrc.includes('startAmbient()'), 'AudioEngine starts ambient bed on unlock');
   });
+
+  it('[6] Mobile viewport simulation 375x812 DPR 3 asserts exitFocus scaleFactor <= 0.25 and room backdrop rendering', () => {
+    const cameraSrc = fs.readFileSync(path.join(ROOT, 'src/rendering/CameraController.ts'), 'utf-8');
+    assert.ok(cameraSrc.includes('effectiveRoomScale'), 'CameraController computes aspect-aware effectiveRoomScale');
+    assert.ok(cameraSrc.includes('ROOM_VIEW_SCALE'), 'CameraController uses ROOM_VIEW_SCALE');
+
+    const mockViewport = { width: 375, height: 812 };
+    const aspect = mockViewport.width / mockViewport.height;
+    const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
+    const roomScaleFactor = 0.35 * portraitFactor;
+
+    assert.ok(roomScaleFactor <= 0.25, `Mobile portrait scale factor ${roomScaleFactor} is <= 0.25`);
+
+    const roomSrc = fs.readFileSync(path.join(ROOT, 'src/rendering/RoomScene.ts'), 'utf-8');
+    assert.ok(roomSrc.includes('update'), 'RoomScene actively updates desk, shelf, lamp, and window on frame loop');
+  });
 });

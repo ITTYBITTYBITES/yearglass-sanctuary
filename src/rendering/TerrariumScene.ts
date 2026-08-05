@@ -64,6 +64,11 @@ export class TerrariumScene {
   private plantNodes: PlantNode[] = [];
   private pipObservation: PipObservation | null = null;
   private soilMoisture = 0.8;
+  private cameraZoom = 1.0;
+
+  setCameraZoom(zoom: number): void {
+    this.cameraZoom = zoom;
+  }
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -204,7 +209,8 @@ export class TerrariumScene {
     this.soilMoisture = moisture;
   }
 
-  update(dt: number, lightIntensity: number): void {
+  update(dt: number, lightIntensity: number, zoom = 1.0): void {
+    this.cameraZoom = zoom;
     this.uniforms.uTime += dt;
     this.uniforms.uLightIntensity = lightIntensity;
     if (this.uniforms.uTapPulse > 0) {
@@ -291,9 +297,17 @@ export class TerrariumScene {
     ctx.setTransform(this.size.dpr, 0, 0, this.size.dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
-    const cx = width / 2;
-    const cy = height / 2;
-    const r = Math.min(width, height) * ROOM_VIEW_SCALE;
+    const cssWidth = this.container.clientWidth || window.innerWidth || width;
+    const cssHeight = this.container.clientHeight || window.innerHeight || height;
+    const cx = cssWidth / 2;
+    const cy = cssHeight / 2;
+
+    const aspect = cssWidth / Math.max(1, cssHeight);
+    const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
+    const roomScale = ROOM_VIEW_SCALE * portraitFactor;
+
+    const baseScale = this.cameraZoom || 1.0;
+    const r = Math.min(cssWidth, cssHeight) * roomScale * baseScale;
 
     // Layer 1: Bioluminescent Ambient Backlight inside dome
     const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);

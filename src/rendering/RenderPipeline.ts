@@ -132,7 +132,7 @@ export class RenderPipeline {
     this.lastFrame = now;
 
     this.camera.update(dt);
-    this.scene.update(dt, this.camera.lightIntensity);
+    this.scene.update(dt, this.camera.lightIntensity, this.camera.currentView.zoom);
     this.onFrame(dt);
 
     const frameMs = this.idle ? IDLE_FPS : HIGH_FPS;

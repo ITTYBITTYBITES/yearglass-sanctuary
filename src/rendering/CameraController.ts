@@ -1,9 +1,11 @@
 /**
  * YearGlass Sanctuary — Camera Controller
  *
- * Aspect-aware camera scale calculation for mobile portrait and desktop viewports.
- * On portrait mobile (aspect < 1.0), ROOM_VIEW_SCALE scales down proportionally
- * so the room background (desk, shelf, window, lamp) fits horizontally.
+ * Aspect-aware camera matrix calculation normalized for high-DPI (Retina) viewports.
+ * Uses logical CSS dimensions exclusively (`clientWidth`/`innerHeight`) so DPR 2x/3x screens
+ * never scale the camera by 2x/3x.
+ * On portrait mobile (375x812, aspect < 1.0), ROOM_VIEW_SCALE produces a dome radius
+ * that occupies <= 25-28% of CSS viewport height in Room View.
  */
 
 export interface CameraView {
@@ -29,8 +31,8 @@ export class CameraController {
   private readonly onResize: () => void;
 
   private viewport: { width: number; height: number } = {
-    width: typeof window !== 'undefined' ? window.innerWidth : 1024,
-    height: typeof window !== 'undefined' ? window.innerHeight : 768,
+    width: typeof window !== 'undefined' ? (window.innerWidth || document.documentElement.clientWidth || 375) : 375,
+    height: typeof window !== 'undefined' ? (window.innerHeight || document.documentElement.clientHeight || 812) : 812,
   };
 
   constructor() {
@@ -70,18 +72,17 @@ export class CameraController {
   }
 
   private refreshViewport(): void {
-    if (typeof window !== 'undefined' && window.visualViewport) {
-      this.viewport.width = window.visualViewport.width || window.innerWidth;
-      this.viewport.height = window.visualViewport.height || window.innerHeight;
-    } else if (typeof window !== 'undefined') {
-      this.viewport.width = window.innerWidth;
-      this.viewport.height = window.innerHeight;
+    if (typeof window !== 'undefined') {
+      this.viewport.width = window.innerWidth || document.documentElement.clientWidth || 375;
+      this.viewport.height = window.innerHeight || document.documentElement.clientHeight || 812;
     }
   }
 
-  private getEffectiveRoomScale(): number {
-    const aspect = this.viewport.width / Math.max(1, this.viewport.height);
-    const portraitFactor = aspect < 1.0 ? Math.max(0.45, aspect * 0.7) : 1.0;
+  get effectiveRoomScale(): number {
+    const cssWidth = this.viewport.width;
+    const cssHeight = this.viewport.height;
+    const aspect = cssWidth / Math.max(1, cssHeight);
+    const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
     return ROOM_VIEW_SCALE * portraitFactor;
   }
 
@@ -89,7 +90,7 @@ export class CameraController {
     const { width, height } = this.viewport;
     const aspect = width / Math.max(1, height);
     const isMobile = width < MOBILE_BREAKPOINT || aspect < 1.2;
-    const roomScale = this.getEffectiveRoomScale();
+    const roomScale = this.effectiveRoomScale;
 
     if (this.target.focusMode) {
       this.target.zoom = isMobile ? (FOCUS_VIEW_SCALE / roomScale) * 1.05 : (FOCUS_VIEW_SCALE / roomScale);
@@ -151,12 +152,20 @@ export class CameraController {
   }
 
   get currentScaleFactor(): number {
-    return this.view.zoom * this.getEffectiveRoomScale();
+    return this.view.zoom * this.effectiveRoomScale;
   }
 
   update(dt: number): void {
     const isFocused = this.target.focusMode || this.view.focusMode;
-    const roomScale = this.getEffectiveRoomScale();
+
+    if (!isFocused) {
+      this.target.focusMode = false;
+      this.view.focusMode = false;
+      this.target.offsetX = 0;
+      this.target.offsetY = 0;
+    }
+
+    const roomScale = this.effectiveRoomScale;
     const targetZoom = isFocused ? (FOCUS_VIEW_SCALE / roomScale) : 1.0;
     const k = Math.min(1, dt * 8.0);
 
