@@ -8,8 +8,9 @@
  *   Layer 2: Background Moss & Secondary Flora
  *   Layer 1: Inner Bioluminescence & Ambient Backlight
  *
- * Integrates the side-profile RoomScene backdrop (wall, window, shelves, desk, props)
- * rendering the terrarium as a clear bell-jar glass cloche resting flat on a wooden tray base on DESK_SURFACE_Y in Room View.
+ * Integrates the side-profile RoomScene backdrop (wall, window, shelves, 3D desk, props)
+ * rendering the terrarium as a clear bell-jar glass cloche resting flat on a wooden tray base
+ * firmly grounded at DESK_SURFACE_Y with a soft oval contact shadow in Room View.
  *
  * Implements hit-testing for terrarium dome and interactive desk props (camera, journal, lamp, mug, radio, window, shelf),
  * and snapshot capture for Photo mode.
@@ -224,10 +225,14 @@ export class TerrariumScene {
     const cssWidth = rect.width;
     const cssHeight = rect.height;
     const visibleHeight = Math.max(100, cssHeight - 210);
-    const DESK_SURFACE_Y = visibleHeight * 0.72;
 
     const cx = cssWidth / 2;
     const isMobile = cssWidth <= 600;
+
+    const DESK_TOP_Y = visibleHeight * 0.62;
+    const DESK_DEPTH = isMobile ? 62 : 78;
+    const DESK_FRONT_Y = DESK_TOP_Y + DESK_DEPTH;
+    const DESK_SURFACE_Y = DESK_FRONT_Y - 10;
 
     const clocheW = Math.min(cssWidth * (isMobile ? 0.36 : 0.38), 240);
     const clocheH = clocheW * 0.68;
@@ -263,22 +268,22 @@ export class TerrariumScene {
       const camX = Math.min(cssWidth - 25, hgX + minPadding);
 
       // 2. Vintage Camera (Far Right Corner)
-      if (Math.abs(x - camX) < 32 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y + 6)) < 28) {
+      if (Math.abs(x - camX) < 32 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y - 6)) < 28) {
         return { type: 'camera', normX: 0, normY: 0 };
       }
 
       // 3. Journal & Hourglass (Right of Dome)
-      if (x >= journalX - 10 && x <= hgX + 25 && Math.abs(y - (DESK_SURFACE_Y + 2)) < 30) {
+      if (x >= journalX - 10 && x <= hgX + 25 && Math.abs(y - (DESK_SURFACE_Y - 10)) < 30) {
         return { type: 'journal', normX: 0, normY: 0 };
       }
 
       // 4. Coffee Mug (Left of Dome)
-      if (Math.abs(x - mugX) < 26 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y + 4)) < 28) {
+      if (Math.abs(x - mugX) < 26 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y - 8)) < 28) {
         return { type: 'mug', normX: 0, normY: 0 };
       }
 
       // 5. Retro Radio (Left of Dome)
-      if (Math.abs(x - radioX) < 28 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y + 2)) < 28) {
+      if (Math.abs(x - radioX) < 28 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y - 10)) < 28) {
         return { type: 'radio', normX: 0, normY: 0 };
       }
 
@@ -411,11 +416,16 @@ export class TerrariumScene {
     const cssHeight = this.container.clientHeight || window.innerHeight || height;
 
     const visibleHeight = Math.max(100, cssHeight - 210);
-    const DESK_SURFACE_Y = visibleHeight * 0.72;
+    const isMobile = cssWidth <= 600;
+
+    const DESK_TOP_Y = visibleHeight * 0.62;
+    const DESK_DEPTH = isMobile ? 62 : 78;
+    const DESK_FRONT_Y = DESK_TOP_Y + DESK_DEPTH;
+    const DESK_SURFACE_Y = DESK_FRONT_Y - 10;
 
     const activeFocus = this.isFocused || this.cameraZoom > 1.25;
 
-    // Layer 0: Side-Profile Room Backdrop (Wall, Window, Shelves, Desk, Props)
+    // Layer 0: Side-Profile Room Backdrop (Wall, Window, Shelves, 3D Desk, Props)
     if (this.roomScene) {
       this.roomScene.draw(ctx, cssWidth, cssHeight, activeFocus);
     } else {
@@ -426,16 +436,15 @@ export class TerrariumScene {
     if (!activeFocus) {
       // === ROOM VIEW: Clear Bell Jar Glass Cloche resting flat on Wooden Tray Base ===
       const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
-      const trayY = DESK_SURFACE_Y + 2 + this.cameraOffsetY * cssHeight; // Sits flat on DESK_SURFACE_Y
-      const isMobile = cssWidth <= 600;
+      const trayY = DESK_SURFACE_Y + this.cameraOffsetY * cssHeight; // Resting flat on DESK_SURFACE_Y
       const domeW = Math.min(cssWidth * (isMobile ? 0.36 : 0.38), 240);
       const domeH = domeW * 0.68;
       const domeTopY = trayY - domeH;
 
-      // 1. Wooden Saucer / Tray Base flat on Desk Surface
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      // 1. Soft Oval Grounding Contact Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
       ctx.beginPath();
-      ctx.ellipse(cx, trayY + 4, domeW * 0.52, 9, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, trayY + 4, domeW * 0.54, 10, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Wooden Saucer Rim
