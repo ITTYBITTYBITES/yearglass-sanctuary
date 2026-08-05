@@ -1,9 +1,8 @@
 /**
  * YearGlass Sanctuary — UI Overlay System
  *
- * Decoupled high-contrast UI overlay HUD, Collapsible Bottom Drawer, and Modal Controllers.
- * Top control pills and bottom drawer attach event listeners immediately upon DOM mount
- * independently of WebGL rendering state.
+ * Consolidates all HUD controls and actions into a bottom drawer.
+ * Completely removes the top HUD bar and provides direct View: Room / View: Focus controls.
  */
 
 import type { GrowthEvent } from '../simulation/GrowthSystem';
@@ -22,10 +21,12 @@ export interface UIOverlayCallbacks {
 export class UIOverlay {
   private uiContainer: HTMLElement | null = null;
   private bottomDrawer: HTMLElement | null = null;
+  private viewToggleBtn: HTMLButtonElement | null = null;
   private activeModal: HTMLElement | null = null;
   private activeToast: HTMLElement | null = null;
   private toastTimeout = 0;
   private isDrawerExpanded = false;
+  private isFocused = false;
   private callbacks: UIOverlayCallbacks;
 
   constructor(callbacks: UIOverlayCallbacks) {
@@ -37,117 +38,46 @@ export class UIOverlay {
     this.uiContainer.className = 'yearglass-ui-overlay';
     this.uiContainer.style.cssText =
       'position:fixed;inset:0;pointer-events:none;z-index:9999;' +
-      'display:flex;flex-direction:column;justify-content:space-between;padding:1rem;';
+      'display:flex;flex-direction:column;justify-content:flex-end;padding:0;';
 
-    // Top Bar Controls
-    const topBar = document.createElement('div');
-    topBar.className = 'yearglass-top-bar';
-    topBar.style.cssText =
-      'display:flex;align-items:center;justify-content:space-between;width:100%;' +
-      'margin-top:max(8px, env(safe-area-inset-top));pointer-events:auto;z-index:9999;';
-
-    const statusBadge = document.createElement('button');
-    statusBadge.id = 'yg-status-badge';
-    statusBadge.className = 'yg-btn-badge';
-    statusBadge.setAttribute('aria-label', 'Sanctuary status: Day and soil moisture. Tap to open Journal.');
-    statusBadge.style.cssText =
-      'display:inline-flex;align-items:center;gap:0.5rem;min-height:40px;padding:8px 14px;' +
-      'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.6);' +
-      'border-radius:999px;font-size:14px;font-weight:700;line-height:1.2;' +
-      'box-shadow:0 6px 20px rgba(0,0,0,0.4);cursor:pointer;pointer-events:auto !important;' +
-      'user-select:none;touch-action:manipulation;z-index:9999;';
-
-    statusBadge.innerHTML = `<span>☀️ Day ${day}</span> · <span>💧 ${Math.round(moisture * 100)}% Soil</span>`;
-
-    const handleBadgeClick = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.callbacks.onButtonTap?.();
-      this.openJournalSignal();
-    };
-    statusBadge.addEventListener('pointerdown', handleBadgeClick, { passive: false });
-    statusBadge.addEventListener('touchstart', handleBadgeClick, { passive: false });
-    statusBadge.addEventListener('click', handleBadgeClick, { passive: false });
-
-    const actionRow = document.createElement('div');
-    actionRow.style.cssText = 'display:flex;align-items:center;gap:0.5rem;pointer-events:auto;z-index:9999;';
-
-    const createHeaderBtn = (label: string, icon: string, onClick: (e: Event) => void) => {
-      const btn = document.createElement('button');
-      btn.className = 'yg-hud-btn';
-      btn.setAttribute('aria-label', label);
-      btn.title = label;
-      btn.innerHTML = `${icon} <span class="yg-btn-label">${label}</span>`;
-      btn.style.cssText =
-        'display:inline-flex;align-items:center;gap:0.45rem;min-height:40px;padding:8px 14px;' +
-        'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.6);' +
-        'border-radius:999px;font-size:14px;font-weight:700;line-height:1.2;' +
-        'box-shadow:0 6px 20px rgba(0,0,0,0.4);cursor:pointer;pointer-events:auto !important;' +
-        'user-select:none;touch-action:manipulation;z-index:9999;';
-
-      const handler = (e: Event) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.callbacks.onButtonTap?.();
-        onClick(e);
-      };
-
-      btn.addEventListener('pointerdown', handler, { passive: false });
-      btn.addEventListener('touchstart', handler, { passive: false });
-      btn.addEventListener('click', handler, { passive: false });
-      return btn;
-    };
-
-    const focusBtn = createHeaderBtn('Focus Mode', '🔍', () => {
-      const isFocused = this.callbacks.onToggleFocus();
-      this.showToast(isFocused ? '🔍 Focus Mode Active' : '🖼️ Room View', isFocused ? 'Close-up terrarium inspection mode.' : 'Framed workspace desktop mode.');
-    });
-
-    const waterBtn = createHeaderBtn('Water', '💧', () => {
-      const msg = this.callbacks.onWater();
-      this.showToast('💧 Terrarium Care', msg);
-    });
-
-    const journalBtn = createHeaderBtn('Journal', '📖', () => this.openJournalSignal());
-    const settingsBtn = createHeaderBtn('Settings', '⚙️', () => this.openSettingsSignal());
-
-    actionRow.append(focusBtn, waterBtn, journalBtn, settingsBtn);
-    topBar.append(statusBadge, actionRow);
-
-    // Bottom Container for Toasts, Dialogue Cards, and Collapsible Drawer
+    // Bottom Container for Toasts & Dialogue Cards
     const bottomSlot = document.createElement('div');
     bottomSlot.id = 'yg-bottom-slot';
     bottomSlot.style.cssText =
-      'display:flex;flex-direction:column;align-items:center;gap:0.75rem;width:100%;pointer-events:none;';
+      'display:flex;flex-direction:column;align-items:center;gap:0.75rem;width:100%;' +
+      'margin-bottom:3.5rem;pointer-events:none;z-index:9999;';
 
-    // Collapsible Bottom Drawer
-    this.mountBottomDrawer(container);
+    // Consolidated Bottom Control Drawer
+    this.mountBottomDrawer(container, day, moisture);
 
-    this.uiContainer.append(topBar, bottomSlot);
+    this.uiContainer.append(bottomSlot);
     container.appendChild(this.uiContainer);
   }
 
-  private mountBottomDrawer(container: HTMLElement): void {
+  private mountBottomDrawer(container: HTMLElement, day: number, moisture: number): void {
     this.bottomDrawer = document.createElement('div');
     this.bottomDrawer.id = 'yg-bottom-drawer';
     this.bottomDrawer.className = 'yg-drawer-card';
     this.bottomDrawer.style.cssText =
-      'position:fixed;bottom:0;left:0;right:0;z-index:90;pointer-events:auto;' +
-      'margin-bottom:0;padding:0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom));' +
+      'position:fixed;bottom:0;left:0;right:0;z-index:9999;pointer-events:auto;' +
+      'padding:0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom));' +
       'background:#fdfbf7;color:#1a1a1a;border-top:2px solid #bfa06a;' +
-      'border-radius:1.2rem 1.2rem 0 0;box-shadow:0 -12px 36px rgba(0,0,0,0.4);' +
+      'border-radius:1.2rem 1.2rem 0 0;box-shadow:0 -12px 36px rgba(0,0,0,0.45);' +
       'transform:translateY(calc(100% - 2.8rem));transition:transform 0.35s cubic-bezier(0.2,0.8,0.2,1);';
 
     this.bottomDrawer.innerHTML = `
-      <div id="yg-drawer-handle" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;cursor:pointer;padding-bottom:0.6rem;user-select:none;touch-action:manipulation;">
-        <span style="width:36px;height:4px;background:#bfa06a;border-radius:999px;opacity:0.8;"></span>
-        <span style="font-size:0.82rem;font-weight:700;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;">Sanctuary Drawer</span>
+      <div id="yg-drawer-handle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-bottom:0.6rem;user-select:none;touch-action:manipulation;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span style="width:28px;height:4px;background:#bfa06a;border-radius:999px;opacity:0.8;"></span>
+          <span id="yg-drawer-status" style="font-size:0.88rem;font-weight:700;color:#1a1a1a;">☀️ Day ${day} · 💧 ${Math.round(moisture * 100)}% Soil</span>
+        </div>
+        <span style="font-size:0.78rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;">Controls ▴</span>
       </div>
-      <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.75rem;padding-top:0.5rem;">
-        <button id="yg-drawer-water" style="padding:0.7rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.5rem;justify-content:center;">💧 Water Plants</button>
-        <button id="yg-drawer-journal" style="padding:0.7rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.5rem;justify-content:center;">📖 View Journal</button>
-        <button id="yg-drawer-focus" style="padding:0.7rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.5rem;justify-content:center;">🔍 Toggle Focus</button>
-        <button id="yg-drawer-settings" style="padding:0.7rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.5rem;justify-content:center;">⚙️ Settings</button>
+      <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:0.6rem;padding-top:0.5rem;">
+        <button id="yg-drawer-view-toggle" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">🖼️ View: Room</button>
+        <button id="yg-drawer-water" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">💧 Water Plant</button>
+        <button id="yg-drawer-journal" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">📖 Journal</button>
+        <button id="yg-drawer-settings" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">⚙️ Settings</button>
       </div>
     `;
 
@@ -166,7 +96,18 @@ export class UIOverlay {
     handle?.addEventListener('touchstart', toggleDrawer, { passive: false });
     handle?.addEventListener('click', toggleDrawer, { passive: false });
 
+    this.viewToggleBtn = this.bottomDrawer.querySelector('#yg-drawer-view-toggle') as HTMLButtonElement;
+    this.viewToggleBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.callbacks.onButtonTap?.();
+      this.isFocused = this.callbacks.onToggleFocus();
+      this.updateViewToggleLabel();
+      this.showToast(this.isFocused ? '🔍 Focus Mode Active' : '🖼️ Room View Active', this.isFocused ? 'Close-up terrarium inspection mode.' : 'Framed workspace desktop mode.');
+    });
+
     this.bottomDrawer.querySelector('#yg-drawer-water')?.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       this.callbacks.onButtonTap?.();
       const msg = this.callbacks.onWater();
@@ -174,19 +115,14 @@ export class UIOverlay {
     });
 
     this.bottomDrawer.querySelector('#yg-drawer-journal')?.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       this.callbacks.onButtonTap?.();
       this.openJournalSignal();
     });
 
-    this.bottomDrawer.querySelector('#yg-drawer-focus')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.callbacks.onButtonTap?.();
-      const isFocused = this.callbacks.onToggleFocus();
-      this.showToast(isFocused ? '🔍 Focus Mode Active' : '🖼️ Room View', isFocused ? 'Close-up terrarium inspection mode.' : 'Framed workspace desktop mode.');
-    });
-
     this.bottomDrawer.querySelector('#yg-drawer-settings')?.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       this.callbacks.onButtonTap?.();
       this.openSettingsSignal();
@@ -205,10 +141,21 @@ export class UIOverlay {
     window.dispatchEvent(event);
   }
 
+  setFocusState(isFocused: boolean): void {
+    this.isFocused = isFocused;
+    this.updateViewToggleLabel();
+  }
+
+  private updateViewToggleLabel(): void {
+    if (this.viewToggleBtn) {
+      this.viewToggleBtn.innerHTML = this.isFocused ? '🔍 View: Focus' : '🖼️ View: Room';
+    }
+  }
+
   updateStatus(day: number, moisture: number): void {
-    const badge = document.getElementById('yg-status-badge');
-    if (badge) {
-      badge.innerHTML = `<span>☀️ Day ${day}</span> · <span>💧 ${Math.round(moisture * 100)}% Soil</span>`;
+    const status = document.getElementById('yg-drawer-status');
+    if (status) {
+      status.innerHTML = `☀️ Day ${day} · 💧 ${Math.round(moisture * 100)}% Soil`;
     }
   }
 
@@ -222,7 +169,7 @@ export class UIOverlay {
       'pointer-events:auto;max-width:32rem;width:calc(100% - 2rem);padding:1rem 1.25rem;' +
       'background:#fdfbf7;color:#1a1a1a;border:1px solid rgba(191,160,106,0.5);' +
       'border-radius:1rem;box-shadow:0 20px 50px rgba(0,0,0,0.45);' +
-      'font-family:system-ui,-apple-system,sans-serif;line-height:1.5;z-index:100;';
+      'font-family:system-ui,-apple-system,sans-serif;line-height:1.5;z-index:9999;';
 
     card.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
@@ -255,7 +202,7 @@ export class UIOverlay {
       'pointer-events:auto;max-width:30rem;width:calc(100% - 2rem);padding:1.1rem 1.35rem;' +
       'background:linear-gradient(180deg, #fefdf9 0%, #f7f2ea 100%);color:#1a1a1a;' +
       'border:2px solid #bfa06a;border-radius:1.1rem;box-shadow:0 20px 50px rgba(0,0,0,0.45);' +
-      'text-align:left;line-height:1.55;z-index:100;';
+      'text-align:left;line-height:1.55;z-index:9999;';
 
     popup.innerHTML = `
       <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
@@ -290,7 +237,7 @@ export class UIOverlay {
     toast.style.cssText =
       'pointer-events:auto;padding:0.7rem 1.1rem;background:#fdfbf7;color:#1a1a1a;' +
       'border:1px solid rgba(191,160,106,0.5);border-radius:999px;' +
-      'box-shadow:0 10px 28px rgba(0,0,0,0.3);font-size:0.88rem;font-weight:600;z-index:100;';
+      'box-shadow:0 10px 28px rgba(0,0,0,0.3);font-size:0.88rem;font-weight:600;z-index:9999;';
     toast.innerHTML = `<strong>${title}</strong> — ${text}`;
 
     this.activeToast = toast;
@@ -310,7 +257,7 @@ export class UIOverlay {
     const overlay = document.createElement('div');
     overlay.className = 'yg-modal-overlay';
     overlay.style.cssText =
-      'position:fixed;inset:0;z-index:150;background:rgba(10,12,10,0.72);' +
+      'position:fixed;inset:0;z-index:99999;background:rgba(10,12,10,0.72);' +
       'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
 
     const modal = document.createElement('div');
@@ -390,7 +337,7 @@ export class UIOverlay {
     const overlay = document.createElement('div');
     overlay.className = 'yg-modal-overlay';
     overlay.style.cssText =
-      'position:fixed;inset:0;z-index:150;background:rgba(10,12,10,0.72);' +
+      'position:fixed;inset:0;z-index:99999;background:rgba(10,12,10,0.72);' +
       'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;pointer-events:auto;';
 
     const modal = document.createElement('div');

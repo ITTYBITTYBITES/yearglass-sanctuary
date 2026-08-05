@@ -251,7 +251,11 @@ export class SimulationEngine {
   private mountUIOverlay(container: HTMLElement): void {
     this.uiOverlay = new UIOverlay({
       onButtonTap: () => this.audio.playButtonTap(),
-      onToggleFocus: () => this.camera.toggleFocus(),
+      onToggleFocus: () => {
+        const isFocused = this.camera.toggleFocus();
+        this.uiOverlay?.setFocusState(isFocused);
+        return isFocused;
+      },
       onWater: () => {
         const msg = this.growth.waterPlants(0.3);
         this.audio.play('shimmer');
@@ -289,6 +293,7 @@ export class SimulationEngine {
 
   enterFocus(): void {
     this.camera.focusOnDome();
+    this.uiOverlay?.setFocusState(true);
     this.pipeline?.wake();
     this.audio.play('shimmer');
   }
@@ -299,6 +304,7 @@ export class SimulationEngine {
 
   exitFocus(): void {
     this.camera.exitFocus();
+    this.uiOverlay?.setFocusState(false);
   }
 
   getMemorySummary(): string {

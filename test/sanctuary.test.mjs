@@ -59,7 +59,7 @@ describe('YearGlass Standalone Sanctuary E2E UX Test Suite', () => {
     assert.ok(mainSrc.includes('intro.remove()'), 'Arrival overlay unmounts cleanly from DOM');
   });
 
-  it('[2] Initial state loads in ROOM mode showing desk, lamp, shelf, and top HUD buttons', () => {
+  it('[2] Initial state loads in ROOM mode showing desk, lamp, shelf, and bottom drawer controls', () => {
     const mainSrc = fs.readFileSync(path.join(ROOT, 'src/main.ts'), 'utf-8');
     assert.ok(mainSrc.includes('engine.exitFocus()'), 'Initial state forces ROOM mode on start');
 
@@ -70,7 +70,7 @@ describe('YearGlass Standalone Sanctuary E2E UX Test Suite', () => {
     assert.ok(roomSrc.includes('yearglass-room-window'), 'RoomScene includes window');
 
     const uiSrc = fs.readFileSync(path.join(ROOT, 'src/ui/UIOverlay.ts'), 'utf-8');
-    assert.ok(uiSrc.includes('yearglass-top-bar'), 'UIOverlay mounts top bar');
+    assert.ok(uiSrc.includes('yg-drawer-card'), 'UIOverlay mounts consolidated bottom drawer');
   });
 
   it('[3] Tapping the glass dome or Focus Mode pill transitions cleanly between ROOM and FOCUS view modes', () => {
