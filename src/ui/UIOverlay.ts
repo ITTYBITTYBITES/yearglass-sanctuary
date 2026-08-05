@@ -69,12 +69,14 @@ export class UIOverlay {
       'transform:translateY(0);transition:transform 0.35s cubic-bezier(0.2,0.8,0.2,1);';
 
     this.bottomDrawer.innerHTML = `
-      <div id="yg-drawer-handle" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:0.6rem;user-select:none;touch-action:manipulation;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <span style="width:28px;height:4px;background:#bfa06a;border-radius:999px;opacity:0.8;"></span>
-          <span id="yg-drawer-status" style="font-size:0.88rem;font-weight:700;color:#1a1a1a;">☀️ Day ${day} · 💧 ${Math.round(moisture * 100)}% Soil</span>
+      <div id="yg-drawer-handle" class="sanctuary-status-bar" style="display:flex;flex-direction:column;gap:4px;width:100%;padding-bottom:0.6rem;user-select:none;touch-action:manipulation;">
+        <div style="display:flex;align-items:center;justify-content:center;margin-bottom:2px;">
+          <span style="width:36px;height:4px;background:#bfa06a;border-radius:999px;opacity:0.8;"></span>
         </div>
-        <span style="font-size:0.78rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;">Sanctuary Controls</span>
+        <div class="sanctuary-metrics" style="display:flex;align-items:center;justify-content:space-between;width:100%;font-size:0.88rem;font-weight:700;color:#1a1a1a;gap:0.5rem;flex-wrap:wrap;">
+          <span id="yg-drawer-status">☀️ Day ${day} · 💧 ${Math.round(moisture * 100)}% Soil</span>
+          <span style="font-size:0.76rem;font-weight:800;color:#8a6a2a;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">Sanctuary Controls</span>
+        </div>
       </div>
       <div id="yg-drawer-content" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.6rem;padding-top:0.4rem;">
         <button id="yg-drawer-view-toggle" style="padding:0.65rem 0.8rem;background:#f5efe6;border:1px solid #bfa06a;border-radius:0.75rem;color:#1a1a1a;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:0.4rem;justify-content:center;font-size:0.85rem;min-height:42px;">🔍 View: Focus</button>
