@@ -1,8 +1,9 @@
 /**
  * YearGlass Sanctuary — Room Scene
  *
- * DOM backdrop representing the cozy workspace environment:
+ * DOM & Canvas backdrop representing the cozy workspace environment:
  * desk surface, wooden shelf, window time-of-day gradient, and warm lamp glow.
+ * Actively rendered and updated on every frame.
  */
 
 export interface RoomState {
@@ -23,7 +24,8 @@ export class RoomScene {
     this.root = document.createElement('div');
     this.root.className = 'yearglass-room';
     this.root.style.cssText =
-      'position:absolute;inset:0;pointer-events:none;overflow:hidden;background:#0d0d0e;';
+      'position:absolute;inset:0;pointer-events:none;overflow:hidden;background:#0d0d0e;' +
+      'transition:opacity 0.4s ease;z-index:0;';
 
     // Window showing time of day / sky
     this.windowFrame = document.createElement('div');
@@ -62,6 +64,16 @@ export class RoomScene {
     container.insertBefore(this.root, container.firstChild);
   }
 
+  update(_dt: number, hours: number, lampOn: boolean, isFocused: boolean): void {
+    if (this.disposed) return;
+
+    this.setLamp(lampOn);
+    this.setTimeOfDay(hours);
+
+    // Unmask room scene fully in Room View, gently soften in Focus Mode
+    this.root.style.opacity = isFocused ? '0.45' : '1.0';
+  }
+
   setLamp(on: boolean): void {
     this.state.lampOn = on;
     this.lamp.style.opacity = on ? '1' : '0.15';
@@ -70,13 +82,12 @@ export class RoomScene {
   setTimeOfDay(hours: number): void {
     const night = hours < 6.5 || hours >= 19.5;
     this.state.night = night;
-    this.root.classList.toggle('night', night);
 
     if (night) {
       this.windowFrame.style.background = 'linear-gradient(160deg,#070e1a,#12203a)';
-    } else if (hours >= 16.5) { // Sunset
+    } else if (hours >= 16.5) {
       this.windowFrame.style.background = 'linear-gradient(160deg,#3a1c22,#5c3328)';
-    } else { // Daytime
+    } else {
       this.windowFrame.style.background = 'linear-gradient(160deg,#2b4c6f,#4a7ba3)';
     }
   }

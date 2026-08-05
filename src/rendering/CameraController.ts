@@ -1,7 +1,8 @@
 /**
  * YearGlass Sanctuary — Camera Controller
  *
- * Handles camera zoom transitions, focus mode, and dynamic aspect ratio scaling.
+ * Hardcoded default initial state to ROOM view mode (`zoom = 1.0`, `isFocused = false`).
+ * Smoothly interpolates camera zoom between ROOM and FOCUS modes upon explicit interaction.
  */
 
 export interface CameraView {
@@ -16,8 +17,8 @@ const IDLE_LIGHT = 0.35;
 const ACTIVE_LIGHT = 0.95;
 
 export class CameraController {
-  private view: CameraView = { zoom: 1, offsetX: 0, offsetY: 0, focusMode: false };
-  private target: CameraView = { ...this.view };
+  private view: CameraView = { zoom: 1.0, offsetX: 0, offsetY: 0, focusMode: false };
+  private target: CameraView = { zoom: 1.0, offsetX: 0, offsetY: 0, focusMode: false };
   private light = IDLE_LIGHT;
   private reduced = false;
   private disposed = false;
@@ -29,13 +30,41 @@ export class CameraController {
   };
 
   constructor() {
+    this.stripPersistentState();
     this.refreshViewport();
+    this.resetToRoomMode();
+
     this.onResize = () => {
       this.refreshViewport();
       this.computeTargets();
     };
     window.addEventListener('resize', this.onResize, { passive: true });
     window.addEventListener('orientationchange', this.onResize, { passive: true });
+  }
+
+  /** Strip any saved viewMode/focus/cameraScale from localStorage on boot. */
+  private stripPersistentState(): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('cameraScale');
+      localStorage.removeItem('viewMode');
+      localStorage.removeItem('focus');
+      localStorage.removeItem('isFocused');
+    }
+  }
+
+  /** Hardcode initial state to ROOM view. */
+  resetToRoomMode(): void {
+    this.target.focusMode = false;
+    this.target.zoom = 1.0;
+    this.target.offsetX = 0;
+    this.target.offsetY = 0;
+
+    this.view.focusMode = false;
+    this.view.zoom = 1.0;
+    this.view.offsetX = 0;
+    this.view.offsetY = 0;
+
+    this.computeTargets();
   }
 
   private refreshViewport(): void {
@@ -61,13 +90,13 @@ export class CameraController {
     }
 
     if (isMobile) {
-      this.target.zoom = Math.max(1.0, Math.min(1.3, 1.15 / aspect));
+      this.target.zoom = Math.max(1.0, Math.min(1.2, 1.1 / aspect));
       this.target.offsetX = 0;
       this.target.offsetY = -0.04;
     } else {
-      this.target.zoom = 1.18;
+      this.target.zoom = 1.05;
       this.target.offsetX = 0;
-      this.target.offsetY = -0.08;
+      this.target.offsetY = -0.06;
     }
   }
 

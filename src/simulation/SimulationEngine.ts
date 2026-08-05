@@ -192,6 +192,7 @@ export class SimulationEngine {
     this.pip.setPresence(true);
     this.pip.update(dt);
     this.env.update(dt);
+    this.room?.update(dt, this.env.currentHours, this.clock.lampOn, this.camera.currentView.focusMode);
 
     if (this.pipeline) {
       this.pipeline.scene.setSimulationData(
