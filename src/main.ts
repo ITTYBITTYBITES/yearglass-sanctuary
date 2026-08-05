@@ -5,6 +5,15 @@
  * and renders the original elegant arrival overlay ("I was here waiting for you.").
  */
 
+// Immediate Unregister of Legacy Service Workers on Boot
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
 import { SimulationEngine } from './simulation/SimulationEngine';
 
 window.onerror = (msg, src, line) => {

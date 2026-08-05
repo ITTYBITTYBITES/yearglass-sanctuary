@@ -107,22 +107,38 @@ export class CameraController {
 
   focusOnDome(): void {
     this.target.focusMode = true;
+    this.view.focusMode = true;
     this.computeTargets();
+  }
+
+  enterFocus(): void {
+    this.focusOnDome();
   }
 
   exitFocus(): void {
     this.target.focusMode = false;
+    this.view.focusMode = false;
+    this.target.zoom = 1.0;
+    this.view.zoom = 1.0;
+    this.target.offsetX = 0;
+    this.target.offsetY = 0;
+    this.view.offsetX = 0;
+    this.view.offsetY = 0;
     this.computeTargets();
   }
 
   toggleFocus(): boolean {
-    if (this.target.focusMode) {
+    if (this.target.focusMode || this.view.focusMode) {
       this.exitFocus();
       return false;
     } else {
-      this.focusOnDome();
+      this.enterFocus();
       return true;
     }
+  }
+
+  get isFocused(): boolean {
+    return this.target.focusMode || this.view.focusMode;
   }
 
   update(dt: number): void {
