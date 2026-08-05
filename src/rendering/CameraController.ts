@@ -144,15 +144,18 @@ export class CameraController {
   }
 
   get currentScaleFactor(): number {
-    return this.isFocused ? FOCUS_VIEW_SCALE : ROOM_VIEW_SCALE;
+    return this.view.zoom * ROOM_VIEW_SCALE;
   }
 
   update(dt: number): void {
-    const k = Math.min(1, dt * 5.0);
-    this.view.zoom += (this.target.zoom - this.view.zoom) * k;
+    const isFocused = this.target.focusMode || this.view.focusMode;
+    const targetZoom = isFocused ? (FOCUS_VIEW_SCALE / ROOM_VIEW_SCALE) : 1.0;
+    const k = Math.min(1, dt * 8.0);
+
+    this.view.zoom += (targetZoom - this.view.zoom) * k;
     this.view.offsetX += (this.target.offsetX - this.view.offsetX) * k;
     this.view.offsetY += (this.target.offsetY - this.view.offsetY) * k;
-    this.view.focusMode = this.target.focusMode;
+    this.view.focusMode = isFocused;
   }
 
   setPointer(x: number, y: number): void {
