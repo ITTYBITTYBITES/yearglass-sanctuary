@@ -1,20 +1,48 @@
 /**
  * YearGlass Sanctuary — Standalone Application Entry
  *
- * Boots the sanctuary engine, mounts room background & WebGL scene immediately,
- * and renders the original elegant arrival overlay ("I was here waiting for you.").
+ * Pre-mount check purges stale CacheStorage & Service Worker registrations
+ * on new build version detection before booting the sanctuary engine.
  */
 
-// Immediate Unregister of Legacy Service Workers on Boot
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister();
-    }
-  });
-}
-
 import { SimulationEngine } from './simulation/SimulationEngine';
+
+const CURRENT_BUILD_VERSION = '1.0.3-20260805-v4';
+
+async function hardBustCacheOnVersionMismatch(): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  const savedVersion = localStorage.getItem('yg_app_version');
+  if (savedVersion !== CURRENT_BUILD_VERSION) {
+    console.log(`[YearGlass] Build update detected (${CURRENT_BUILD_VERSION}). Purging stale caches & SWs...`);
+
+    let cacheCleared = false;
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      if (keys.length > 0) {
+        await Promise.all(keys.map((k) => caches.delete(k)));
+        cacheCleared = true;
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      if (registrations.length > 0) {
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+        cacheCleared = true;
+      }
+    }
+
+    localStorage.setItem('yg_app_version', CURRENT_BUILD_VERSION);
+
+    if (cacheCleared && savedVersion !== null) {
+      window.location.reload();
+      return;
+    }
+  }
+}
 
 window.onerror = (msg, src, line) => {
   console.error('[YearGlass error]:', msg, src, line);
@@ -36,7 +64,6 @@ function ensureMount(): HTMLElement {
 async function bootSanctuary(): Promise<void> {
   const mount = ensureMount();
 
-  // Create & mount the simulation engine immediately so room & scene render behind the overlay
   const engine = new SimulationEngine({
     onMemory: (message) => console.log('[YearGlass memory]', message),
     onPipObserved: (visited) => console.log('[YearGlass] Pip visit #' + visited),
@@ -48,7 +75,6 @@ async function bootSanctuary(): Promise<void> {
     console.error('[YearGlass] mount failed:', err);
   }
 
-  // Original arrival overlay styling & typography
   const intro = document.createElement('div');
   intro.className = 'yearglass-intro';
   intro.style.cssText =
@@ -70,17 +96,14 @@ async function bootSanctuary(): Promise<void> {
     if (started) return;
     started = true;
 
-    // Smooth CSS opacity & blur transition
     intro.style.pointerEvents = 'none';
     intro.style.opacity = '0';
     intro.style.filter = 'blur(10px)';
 
-    // Unmount overlay DOM element entirely after transition
     setTimeout(() => {
       intro.remove();
     }, 850);
 
-    // Force default initial state to ROOM view (not FOCUS mode)
     engine.exitFocus();
   };
 
@@ -99,6 +122,9 @@ async function bootSanctuary(): Promise<void> {
 }
 
 console.log('YearGlass Sanctuary — Standalone Production Engine');
-bootSanctuary().catch((e) => {
-  console.error('Engine init failed:', e);
+
+hardBustCacheOnVersionMismatch().then(() => {
+  bootSanctuary().catch((e) => {
+    console.error('Engine init failed:', e);
+  });
 });

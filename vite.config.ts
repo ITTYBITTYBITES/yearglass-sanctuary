@@ -52,7 +52,27 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2,webmanifest}'],
+        navigateFallback: null,
+        globPatterns: ['**/*.{js,css,ico,png,svg,json,woff2,webmanifest}'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === 'document',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages-network-first',
+              expiration: { maxEntries: 10, maxAgeSeconds: 86400 },
+            },
+          },
+          {
+            urlPattern: ({ request }) =>
+              ['style', 'script', 'worker', 'image'].includes(request.destination),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'assets',
+              expiration: { maxEntries: 100, maxAgeSeconds: 604800 },
+            },
+          },
+        ],
       },
     }),
   ],
