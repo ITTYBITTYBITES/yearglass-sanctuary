@@ -1,10 +1,19 @@
 /**
  * YearGlass Sanctuary — Room Scene
  *
- * DOM & Canvas side-profile backdrop representing the cozy workspace environment:
- * desk surface, wooden shelf with decor, centered sky window, and warm lamp glow.
- * Provides both DOM elements and Canvas 2D draw routines for seamless composition
- * behind the terrarium dome in both Room View and Focus Mode.
+ * Side-profile backdrop matching original reference composition:
+ *   - Cream/beige wall wallpaper with soft ceiling shadow
+ *   - Centered 4-pane window with sunset sky, soft clouds & horizon glow
+ *   - Left floating shelves with colorful book spines & potted succulents
+ *   - Right wall hanging framed art pieces (landscape & polaroid)
+ *   - Spanning wooden tabletop desk surface across lower third
+ *   - Cozy desk props:
+ *       * Warm ceramic coffee mug with handle & steam (left of dome)
+ *       * Small desk lamp with warm light beam
+ *       * Open leather-bound journal with pencil (right of dome)
+ *       * Wooden hourglass timer with golden sand
+ *       * Vintage camera on far right corner
+ *   - Wooden tray/pedestal base for terrarium dome cloche
  */
 
 export interface RoomState {
@@ -26,31 +35,31 @@ export class RoomScene {
     this.root.className = 'yearglass-room';
     this.root.style.cssText =
       'position:absolute;inset:0;width:100vw;height:100dvh;pointer-events:none;overflow:hidden;' +
-      'background:#f3efe6;object-fit:cover;transition:opacity 0.4s ease;z-index:0;';
+      'background:#f4efea;object-fit:cover;transition:opacity 0.4s ease;z-index:0;';
 
     // Window centered behind desk
     this.windowFrame = document.createElement('div');
     this.windowFrame.className = 'yearglass-room-window';
     this.windowFrame.style.cssText =
-      'position:absolute;top:10%;left:50%;transform:translateX(-50%);width:min(38%, 280px);height:min(32%, 220px);' +
-      'border-radius:12px;border:8px solid #3d271d;background:linear-gradient(180deg,#4a90e2,#e0f7fa);' +
-      'box-shadow:inset 0 0 25px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.25);';
+      'position:absolute;top:10%;left:50%;transform:translateX(-50%);width:min(42%, 320px);height:min(34%, 230px);' +
+      'border-radius:10px;border:8px solid #6e472b;background:linear-gradient(180deg,#7b628a,#f0a85d,#fce4c6);' +
+      'box-shadow:inset 0 0 25px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2);';
 
     // Left Wooden Shelves
     this.shelf = document.createElement('div');
     this.shelf.className = 'yearglass-room-shelf';
     this.shelf.style.cssText =
-      'position:absolute;top:28%;left:5%;width:min(26%, 180px);height:10px;' +
-      'background:linear-gradient(180deg,#7a4b2a,#4a2e1a);' +
-      'border-bottom:2px solid #3d271d;box-shadow:0 6px 16px rgba(0,0,0,0.35);';
+      'position:absolute;top:26%;left:4%;width:min(24%, 170px);height:10px;' +
+      'background:linear-gradient(180deg,#8b5a2b,#5c3a21);' +
+      'border-bottom:2px solid #3d271d;box-shadow:0 6px 16px rgba(0,0,0,0.3);';
 
     // Warm Wooden Desk Surface (Spanning lower third, bottom: 0)
     this.desk = document.createElement('div');
     this.desk.className = 'yearglass-room-desk';
     this.desk.style.cssText =
-      'position:absolute;bottom:0;left:0;right:0;width:100%;height:33%;' +
-      'background:linear-gradient(180deg,#5c3a21 0%,#23120b 100%);' +
-      'border-top:3px solid #a06e3b;' +
+      'position:absolute;bottom:0;left:0;right:0;width:100%;height:36%;' +
+      'background:linear-gradient(180deg,#6e4c2e 0%,#3b2312 100%);' +
+      'border-top:4px solid #a67c4e;' +
       'box-shadow:inset 0 4px 20px rgba(0,0,0,0.5), 0 -8px 24px rgba(0,0,0,0.3);';
 
     // Warm Ambient Lamp
@@ -71,8 +80,7 @@ export class RoomScene {
     this.setLamp(lampOn);
     this.setTimeOfDay(hours);
 
-    // Unmask room scene fully in Room View, gently soften in Focus Mode
-    this.root.style.opacity = isFocused ? '0.40' : '1.0';
+    this.root.style.opacity = isFocused ? '0.35' : '1.0';
   }
 
   setLamp(on: boolean): void {
@@ -87,9 +95,9 @@ export class RoomScene {
     if (night) {
       this.windowFrame.style.background = 'linear-gradient(180deg,#070e1a,#1a2c4d)';
     } else if (hours >= 16.5) {
-      this.windowFrame.style.background = 'linear-gradient(180deg,#3a1c22,#8f4e3b)';
+      this.windowFrame.style.background = 'linear-gradient(180deg,#5a3d5e,#d47a52,#f9c89b)';
     } else {
-      this.windowFrame.style.background = 'linear-gradient(180deg,#4a90e2,#e0f7fa)';
+      this.windowFrame.style.background = 'linear-gradient(180deg,#4a90e2,#87ceeb,#e0f7fa)';
     }
   }
 
@@ -97,22 +105,10 @@ export class RoomScene {
     return this.state.night;
   }
 
-  /**
-   * Draw the complete side-profile room scene graph onto a 2D canvas context.
-   *
-   * Includes:
-   *  - Wall Background: Cream/beige vertical wallpaper gradient (#F3EFE6) with stripes
-   *  - Window: Centered blue sky gradient window with frame, pane grids & sun/moon glow
-   *  - Shelves & Decor: Left wooden shelves with stacked books and potted plants
-   *  - Desk Surface: Warm wooden tabletop spanning lower third (deskY ~ 67% height)
-   *  - Lamp: Left desk lamp with shade and warm radial/beam light glow
-   *  - Focus Mode Dimming: Softens background when isFocused is true
-   */
   draw(ctx: CanvasRenderingContext2D, width: number, height: number, isFocused: boolean): void {
     if (this.disposed) return;
     ctx.save();
 
-    // Helper for cross-environment rounded rectangles
     const drawRectRounded = (
       c: CanvasRenderingContext2D,
       rx: number,
@@ -128,286 +124,446 @@ export class RoomScene {
       }
     };
 
-    // 1. WALL BACKGROUND (Cream/beige vertical wallpaper gradient #F3EFE6)
+    // 1. WALL BACKGROUND (Warm cream wall with soft vertical tone)
     const wallGrad = ctx.createLinearGradient(0, 0, 0, height);
-    wallGrad.addColorStop(0, '#F7F4EB');
-    wallGrad.addColorStop(0.5, '#F3EFE6');
-    wallGrad.addColorStop(1, '#E8E2D5');
+    wallGrad.addColorStop(0, '#F6F1EC');
+    wallGrad.addColorStop(0.6, '#EFE8DA');
+    wallGrad.addColorStop(1, '#E2D8C5');
     ctx.fillStyle = wallGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Wallpaper subtle vertical stripes
-    ctx.fillStyle = 'rgba(215, 205, 190, 0.18)';
-    const stripeWidth = 24;
-    for (let x = 0; x < width; x += stripeWidth * 2) {
-      ctx.fillRect(x, 0, stripeWidth, height * 0.67);
+    // Wall wallpaper subtle vertical stripes
+    ctx.fillStyle = 'rgba(215, 202, 185, 0.18)';
+    const stripeW = 28;
+    for (let x = 0; x < width; x += stripeW * 2) {
+      ctx.fillRect(x, 0, stripeW, height * 0.65);
     }
 
-    // Top ceiling ambient shadow
-    const topShadow = ctx.createLinearGradient(0, 0, 0, 45);
-    topShadow.addColorStop(0, 'rgba(0, 0, 0, 0.12)');
+    // Top ceiling shadow
+    const topShadow = ctx.createLinearGradient(0, 0, 0, 40);
+    topShadow.addColorStop(0, 'rgba(0, 0, 0, 0.10)');
     topShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = topShadow;
-    ctx.fillRect(0, 0, width, 45);
+    ctx.fillRect(0, 0, width, 40);
 
-    // 2. WINDOW (Centered blue sky gradient window behind desk with frame & pane grids)
-    const windowWidth = Math.min(width * 0.38, 280);
-    const windowHeight = Math.min(height * 0.32, 220);
+    // 2. WINDOW (Centered 4-pane window with sunset sky, soft clouds & horizon glow)
+    const windowWidth = Math.min(width * 0.44, 340);
+    const windowHeight = Math.min(height * 0.34, 240);
     const windowX = (width - windowWidth) / 2;
     const windowY = height * 0.10;
 
-    // Window outer wooden frame
-    ctx.fillStyle = '#3D271D';
+    // Outer wooden frame
+    ctx.fillStyle = '#6E472B';
     ctx.beginPath();
-    drawRectRounded(ctx, windowX - 8, windowY - 8, windowWidth + 16, windowHeight + 16, 12);
+    drawRectRounded(ctx, windowX - 9, windowY - 9, windowWidth + 18, windowHeight + 18, 10);
     ctx.fill();
 
-    // Window frame inner bevel
-    ctx.fillStyle = '#2A1B0E';
+    // Frame inner bevel
+    ctx.fillStyle = '#4D301B';
     ctx.beginPath();
-    drawRectRounded(ctx, windowX - 3, windowY - 3, windowWidth + 6, windowHeight + 6, 8);
+    drawRectRounded(ctx, windowX - 3, windowY - 3, windowWidth + 6, windowHeight + 6, 6);
     ctx.fill();
 
-    // Sky gradient inside window
+    // Sunset Sky Gradient
     const skyGrad = ctx.createLinearGradient(0, windowY, 0, windowY + windowHeight);
     if (this.state.night) {
-      skyGrad.addColorStop(0, '#070E1A');
-      skyGrad.addColorStop(0.6, '#12203A');
-      skyGrad.addColorStop(1, '#1A2C4D');
+      skyGrad.addColorStop(0, '#0C1322');
+      skyGrad.addColorStop(0.6, '#182A4A');
+      skyGrad.addColorStop(1, '#283E66');
     } else {
-      skyGrad.addColorStop(0, '#4A90E2');
-      skyGrad.addColorStop(0.5, '#87CEEB');
-      skyGrad.addColorStop(1, '#E0F7FA');
+      skyGrad.addColorStop(0, '#7B628A');
+      skyGrad.addColorStop(0.5, '#F0A85D');
+      skyGrad.addColorStop(1, '#FCE4C6');
     }
     ctx.fillStyle = skyGrad;
     ctx.beginPath();
-    drawRectRounded(ctx, windowX, windowY, windowWidth, windowHeight, 6);
+    drawRectRounded(ctx, windowX, windowY, windowWidth, windowHeight, 4);
     ctx.fill();
 
-    // Sun / Moon Glow inside window
+    // Soft clouds drifting in sky
     if (!this.state.night) {
-      const sunX = windowX + windowWidth * 0.72;
-      const sunY = windowY + windowHeight * 0.32;
-      const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 55);
-      sunGlow.addColorStop(0, 'rgba(255, 253, 220, 0.95)');
-      sunGlow.addColorStop(0.35, 'rgba(255, 235, 170, 0.55)');
-      sunGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.fillStyle = sunGlow;
-      ctx.beginPath();
-      ctx.arc(sunX, sunY, 55, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.32)';
+      const cloudPuffs = [
+        { x: windowX + windowWidth * 0.25, y: windowY + windowHeight * 0.28, r: 18 },
+        { x: windowX + windowWidth * 0.32, y: windowY + windowHeight * 0.25, r: 24 },
+        { x: windowX + windowWidth * 0.40, y: windowY + windowHeight * 0.29, r: 16 },
+        { x: windowX + windowWidth * 0.70, y: windowY + windowHeight * 0.40, r: 20 },
+        { x: windowX + windowWidth * 0.78, y: windowY + windowHeight * 0.38, r: 26 },
+        { x: windowX + windowWidth * 0.85, y: windowY + windowHeight * 0.42, r: 18 },
+      ];
+      for (const p of cloudPuffs) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else {
-      const moonX = windowX + windowWidth * 0.75;
-      const moonY = windowY + windowHeight * 0.28;
-      ctx.fillStyle = '#E8F0F8';
+      // Moon
+      ctx.fillStyle = '#F0F4F8';
       ctx.beginPath();
-      ctx.arc(moonX, moonY, 14, 0, Math.PI * 2);
+      ctx.arc(windowX + windowWidth * 0.8, windowY + windowHeight * 0.25, 15, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Window Glass Pane Grids (Muntins)
-    ctx.strokeStyle = '#3D271D';
-    ctx.lineWidth = 4;
-    // Vertical center bar
+    // Window Pane Grids (Muntins)
+    ctx.strokeStyle = '#6E472B';
+    ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(windowX + windowWidth / 2, windowY);
     ctx.lineTo(windowX + windowWidth / 2, windowY + windowHeight);
     ctx.stroke();
-    // Horizontal crossbar
     ctx.beginPath();
     ctx.moveTo(windowX, windowY + windowHeight / 2);
     ctx.lineTo(windowX + windowWidth, windowY + windowHeight / 2);
     ctx.stroke();
 
-    // Glass sheen reflection overlay
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+    // Glass sheen
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.beginPath();
     ctx.moveTo(windowX, windowY);
-    ctx.lineTo(windowX + windowWidth * 0.42, windowY);
-    ctx.lineTo(windowX, windowY + windowHeight * 0.62);
+    ctx.lineTo(windowX + windowWidth * 0.45, windowY);
+    ctx.lineTo(windowX, windowY + windowHeight * 0.60);
     ctx.closePath();
     ctx.fill();
 
-    // 3. SHELVES & DECOR (Left Wooden Shelves with Books & Plants)
-    const shelfX = Math.max(16, width * 0.05);
-    const shelfWidth = Math.min(width * 0.25, 180);
+    // 3. LEFT WALL FLOATING SHELVES & DECOR
+    const shelfX = Math.max(12, width * 0.04);
+    const shelfW = Math.min(width * 0.22, 160);
     const shelf1Y = height * 0.26;
     const shelf2Y = height * 0.44;
 
     const drawPlank = (sx: number, sy: number, sw: number) => {
-      ctx.fillStyle = '#7A4B2A';
+      ctx.fillStyle = '#8B5A2B';
       ctx.fillRect(sx, sy, sw, 3);
-      ctx.fillStyle = '#4A2E1A';
+      ctx.fillStyle = '#5C3A21';
       ctx.fillRect(sx, sy + 3, sw, 8);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
       ctx.fillRect(sx, sy + 11, sw + 4, 6);
     };
 
     // Upper Shelf 1
-    drawPlank(shelfX, shelf1Y, shelfWidth);
+    drawPlank(shelfX, shelf1Y, shelfW);
 
-    // Books on Upper Shelf
-    const bookColors = ['#A83232', '#2E6B40', '#2D4A8A', '#D4A338'];
-    let bx = shelfX + 12;
-    for (let i = 0; i < bookColors.length; i++) {
-      const bw = 8 + (i % 2) * 3;
-      const bh = 20 + (i % 3) * 6;
-      ctx.fillStyle = bookColors[i];
-      ctx.fillRect(bx, shelf1Y - bh, bw, bh);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-      ctx.fillRect(bx + 2, shelf1Y - bh + 3, bw - 4, 2);
-      bx += bw + 2;
+    // Books on Upper Shelf 1
+    const books = [
+      { color: '#A83232', w: 8, h: 22 },
+      { color: '#D4A338', w: 10, h: 26 },
+      { color: '#2E6B40', w: 9, h: 20 },
+      { color: '#2D4A8A', w: 11, h: 24 },
+      { color: '#C86446', w: 8, h: 18 },
+    ];
+    let bx = shelfX + 8;
+    for (const b of books) {
+      ctx.fillStyle = b.color;
+      ctx.fillRect(bx, shelf1Y - b.h, b.w, b.h);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fillRect(bx + 2, shelf1Y - b.h + 3, b.w - 4, 2);
+      bx += b.w + 2;
     }
 
-    // Small Potted Plant on Upper Shelf
-    const potX = shelfX + shelfWidth - 28;
-    const potY = shelf1Y;
+    // Small Potted Succulent on Upper Shelf
+    const potX = shelfX + shelfW - 24;
     ctx.fillStyle = '#C86446';
     ctx.beginPath();
-    ctx.moveTo(potX - 8, potY - 14);
-    ctx.lineTo(potX + 8, potY - 14);
-    ctx.lineTo(potX + 6, potY);
-    ctx.lineTo(potX - 6, potY);
+    ctx.moveTo(potX - 7, shelf1Y - 12);
+    ctx.lineTo(potX + 7, shelf1Y - 12);
+    ctx.lineTo(potX + 5, shelf1Y);
+    ctx.lineTo(potX - 5, shelf1Y);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = '#D87456';
-    ctx.fillRect(potX - 9, potY - 16, 18, 3);
-
-    ctx.fillStyle = '#438A58';
+    ctx.fillStyle = '#529C6B';
     ctx.beginPath();
-    ctx.arc(potX - 4, potY - 20, 6, 0, Math.PI * 2);
-    ctx.arc(potX + 4, potY - 22, 7, 0, Math.PI * 2);
-    ctx.arc(potX, potY - 25, 8, 0, Math.PI * 2);
+    ctx.arc(potX, shelf1Y - 17, 7, 0, Math.PI * 2);
     ctx.fill();
 
     // Lower Shelf 2
-    drawPlank(shelfX, shelf2Y, shelfWidth);
+    drawPlank(shelfX, shelf2Y, shelfW);
 
-    // Tilted book & second plant on Lower Shelf
-    ctx.save();
-    ctx.translate(shelfX + 18, shelf2Y);
-    ctx.rotate(-0.18);
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(0, -24, 10, 24);
-    ctx.restore();
-
-    const pot2X = shelfX + shelfWidth - 40;
-    ctx.fillStyle = '#5C6B73';
-    ctx.fillRect(pot2X - 7, shelf2Y - 12, 14, 12);
-    ctx.fillStyle = '#529C6B';
+    // Two small potted plants on Lower Shelf
+    const pot2aX = shelfX + 18;
+    ctx.fillStyle = '#A06E3B';
+    ctx.fillRect(pot2aX - 6, shelf2Y - 10, 12, 10);
+    ctx.fillStyle = '#438A58';
     ctx.beginPath();
-    ctx.arc(pot2X, shelf2Y - 18, 9, 0, Math.PI * 2);
+    ctx.arc(pot2aX, shelf2Y - 15, 6, 0, Math.PI * 2);
     ctx.fill();
 
-    // 4. DESK SURFACE (Warm wooden tabletop spanning lower third, bottom: 0)
-    const deskY = height * 0.67;
-    const deskHeight = height - deskY;
+    const pot2bX = shelfX + shelfW - 30;
+    ctx.fillStyle = '#5C6B73';
+    ctx.fillRect(pot2bX - 7, shelf2Y - 12, 14, 12);
+    ctx.fillStyle = '#326243';
+    ctx.beginPath();
+    ctx.arc(pot2bX, shelf2Y - 18, 8, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Tabletop top edge highlight line
-    ctx.fillStyle = '#A06E3B';
-    ctx.fillRect(0, deskY - 3, width, 3);
+    // 4. RIGHT WALL HANGING FRAMED ARTWORK
+    const art1X = Math.min(width * 0.76, windowX + windowWidth + 18);
+    const art1Y = height * 0.20;
+    const art1W = Math.min(width * 0.10, 70);
+    const art1H = art1W * 0.75;
 
-    // Tabletop rich wood gradient
+    // Art Frame 1 (Landscape Painting)
+    ctx.fillStyle = '#6E472B';
+    ctx.fillRect(art1X - 4, art1Y - 4, art1W + 8, art1H + 8);
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(art1X, art1Y, art1W, art1H);
+    ctx.fillStyle = '#82A352';
+    ctx.beginPath();
+    ctx.arc(art1X + art1W * 0.5, art1Y + art1H * 1.1, art1W * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFD15C';
+    ctx.beginPath();
+    ctx.arc(art1X + art1W * 0.7, art1Y + art1H * 0.35, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Art Frame 2 (Matted Polaroid)
+    const art2X = art1X + art1W + 14;
+    const art2Y = art1Y;
+    const art2W = Math.min(width * 0.08, 55);
+    const art2H = art2W * 1.15;
+
+    if (art2X + art2W < width - 10) {
+      ctx.fillStyle = '#6E472B';
+      ctx.fillRect(art2X - 4, art2Y - 4, art2W + 8, art2H + 8);
+      ctx.fillStyle = '#FDFBF7';
+      ctx.fillRect(art2X, art2Y, art2W, art2H);
+      ctx.fillStyle = '#E2D8C5';
+      ctx.fillRect(art2X + 6, art2Y + 6, art2W - 12, art2H - 18);
+    }
+
+    // 5. DESK SURFACE (Warm wood tabletop across lower third, deskY ~ 62% height)
+    const deskY = height * 0.62;
+    const deskH = height - deskY;
+
+    ctx.fillStyle = '#A67C4E';
+    ctx.fillRect(0, deskY - 4, width, 4);
+
     const deskGrad = ctx.createLinearGradient(0, deskY, 0, height);
-    deskGrad.addColorStop(0, '#5C3A21');
-    deskGrad.addColorStop(0.3, '#432616');
-    deskGrad.addColorStop(1, '#23120B');
+    deskGrad.addColorStop(0, '#6E4C2E');
+    deskGrad.addColorStop(0.3, '#4A301A');
+    deskGrad.addColorStop(1, '#2B1A0D');
     ctx.fillStyle = deskGrad;
-    ctx.fillRect(0, deskY, width, deskHeight);
+    ctx.fillRect(0, deskY, width, deskH);
 
-    // Wood grain lines
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-    for (let gy = deskY + 10; gy < height; gy += 14) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+    for (let gy = deskY + 12; gy < height; gy += 16) {
       ctx.fillRect(0, gy, width, 2);
     }
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-    for (let gy = deskY + 4; gy < height; gy += 20) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    for (let gy = deskY + 6; gy < height; gy += 22) {
       ctx.fillRect(0, gy, width, 1);
     }
 
-    // Tabletop front lip shadow
-    const lipGrad = ctx.createLinearGradient(0, deskY, 0, deskY + 12);
-    lipGrad.addColorStop(0, 'rgba(0, 0, 0, 0.35)');
+    const lipGrad = ctx.createLinearGradient(0, deskY, 0, deskY + 14);
+    lipGrad.addColorStop(0, 'rgba(0, 0, 0, 0.38)');
     lipGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = lipGrad;
-    ctx.fillRect(0, deskY, width, 12);
+    ctx.fillRect(0, deskY, width, 14);
 
-    // 5. LAMP (Desk lamp on left emitting warm radial light glow)
-    const lampX = Math.max(30, width * 0.18);
-    const lampBaseY = deskY;
-    const lampHeight = height * 0.28;
-    const lampTopY = lampBaseY - lampHeight;
+    // 6. COZY DESK PROPS
+    const cx = width / 2;
+    const clocheW = Math.min(width * 0.38, 260);
 
-    // Lamp desk shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    // A. Small Desk Lamp (Left of Dome)
+    const lampX = Math.max(25, width * 0.16);
+    const lampBaseY = deskY + 4;
+    const lampH = height * 0.22;
+    const lampTopY = lampBaseY - lampH;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
     ctx.beginPath();
-    ctx.ellipse(lampX, lampBaseY, 22, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(lampX, lampBaseY, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Lamp Base
-    ctx.fillStyle = '#2A2018';
-    ctx.beginPath();
-    ctx.ellipse(lampX, lampBaseY - 3, 18, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#4A3B2C';
-    ctx.fillRect(lampX - 16, lampBaseY - 6, 32, 3);
-
-    // Lamp Arched Stem
-    ctx.strokeStyle = '#3A2E20';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(lampX, lampBaseY - 6);
-    ctx.quadraticCurveTo(lampX - 15, lampBaseY - lampHeight * 0.5, lampX + 15, lampTopY + 12);
-    ctx.stroke();
-
-    // Lamp Shade
-    const shadeX = lampX + 18;
-    const shadeY = lampTopY + 12;
     ctx.fillStyle = '#3A2E20';
     ctx.beginPath();
-    ctx.moveTo(shadeX - 12, shadeY);
-    ctx.lineTo(shadeX + 16, shadeY - 10);
-    ctx.lineTo(shadeX + 22, shadeY + 12);
-    ctx.lineTo(shadeX - 18, shadeY + 12);
+    ctx.ellipse(lampX, lampBaseY - 2, 14, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#4D3D2A';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(lampX, lampBaseY - 4);
+    ctx.quadraticCurveTo(lampX - 12, lampBaseY - lampH * 0.5, lampX + 12, lampTopY + 10);
+    ctx.stroke();
+
+    const shadeX = lampX + 14;
+    const shadeY = lampTopY + 10;
+    ctx.fillStyle = '#E2B144';
+    ctx.beginPath();
+    ctx.moveTo(shadeX - 10, shadeY);
+    ctx.lineTo(shadeX + 12, shadeY - 8);
+    ctx.lineTo(shadeX + 18, shadeY + 10);
+    ctx.lineTo(shadeX - 14, shadeY + 10);
     ctx.closePath();
     ctx.fill();
 
-    // Lamp Warm Radial Light Glow
     if (this.state.lampOn) {
       const glowX = shadeX + 2;
-      const glowY = shadeY + 12;
-      const glowRadius = Math.max(width, height) * 0.45;
+      const glowY = shadeY + 10;
 
-      // Cone beam of light towards desk
       ctx.save();
-      const lightBeam = ctx.createLinearGradient(glowX, glowY, glowX + 40, deskY);
-      lightBeam.addColorStop(0, 'rgba(255, 225, 150, 0.48)');
-      lightBeam.addColorStop(0.5, 'rgba(255, 200, 110, 0.25)');
+      const lightBeam = ctx.createLinearGradient(glowX, glowY, glowX + 35, deskY);
+      lightBeam.addColorStop(0, 'rgba(255, 235, 160, 0.55)');
+      lightBeam.addColorStop(0.6, 'rgba(255, 200, 110, 0.25)');
       lightBeam.addColorStop(1, 'rgba(255, 180, 80, 0.05)');
       ctx.fillStyle = lightBeam;
 
       ctx.beginPath();
-      ctx.moveTo(glowX - 15, glowY);
-      ctx.lineTo(glowX + 20, glowY);
-      ctx.lineTo(glowX + width * 0.45, deskY);
-      ctx.lineTo(glowX - width * 0.15, deskY);
+      ctx.moveTo(glowX - 12, glowY);
+      ctx.lineTo(glowX + 16, glowY);
+      ctx.lineTo(glowX + width * 0.35, deskY + 10);
+      ctx.lineTo(glowX - width * 0.12, deskY + 10);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
+    }
 
-      // Soft radial bloom
-      const radialGlow = ctx.createRadialGradient(glowX, glowY, 10, glowX, glowY, glowRadius);
-      radialGlow.addColorStop(0, 'rgba(255, 230, 160, 0.55)');
-      radialGlow.addColorStop(0.3, 'rgba(255, 190, 100, 0.25)');
-      radialGlow.addColorStop(0.7, 'rgba(255, 160, 70, 0.08)');
-      radialGlow.addColorStop(1, 'rgba(255, 140, 50, 0)');
-      ctx.fillStyle = radialGlow;
+    // B. Warm Coffee Mug (Left of Dome)
+    const mugX = Math.max(lampX + 35, cx - clocheW * 0.72);
+    const mugY = deskY + 10;
+    const mugW = 16;
+    const mugH = 18;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    ctx.beginPath();
+    ctx.ellipse(mugX, mugY + mugH, 11, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#D98880';
+    ctx.beginPath();
+    drawRectRounded(ctx, mugX - mugW / 2, mugY, mugW, mugH, 3);
+    ctx.fill();
+
+    ctx.strokeStyle = '#D98880';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(mugX - mugW / 2 - 2, mugY + mugH / 2, 5, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.stroke();
+
+    ctx.fillStyle = '#4A2A18';
+    ctx.beginPath();
+    ctx.ellipse(mugX, mugY + 2, mugW / 2 - 1, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(mugX - 2, mugY - 2);
+    ctx.quadraticCurveTo(mugX - 5, mugY - 8, mugX - 2, mugY - 14);
+    ctx.moveTo(mugX + 3, mugY - 2);
+    ctx.quadraticCurveTo(mugX + 6, mugY - 9, mugX + 3, mugY - 16);
+    ctx.stroke();
+
+    // C. Open Leather-Bound Journal & Pencil (Right of Dome)
+    const journalX = cx + clocheW * 0.65;
+    const journalY = deskY + 6;
+    const journalW = Math.min(width * 0.16, 110);
+    const journalH = journalW * 0.68;
+
+    if (journalX + journalW < width - 60) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
+      ctx.fillRect(journalX - 2, journalY + 2, journalW + 4, journalH + 4);
+
+      ctx.fillStyle = '#5C3A21';
+      ctx.fillRect(journalX - 4, journalY - 2, journalW + 8, journalH + 4);
+
+      ctx.fillStyle = '#FDFBF7';
+      ctx.fillRect(journalX, journalY, journalW, journalH);
+
+      ctx.strokeStyle = '#D4C5B2';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(glowX, glowY, glowRadius, 0, Math.PI * 2);
+      ctx.moveTo(journalX + journalW / 2, journalY);
+      ctx.lineTo(journalX + journalW / 2, journalY + journalH);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(180, 165, 150, 0.35)';
+      for (let ly = journalY + 8; ly < journalY + journalH - 6; ly += 6) {
+        ctx.fillRect(journalX + 6, ly, journalW / 2 - 12, 1);
+        ctx.fillRect(journalX + journalW / 2 + 6, ly, journalW / 2 - 12, 1);
+      }
+
+      const penX = journalX + journalW + 6;
+      const penY = journalY + journalH - 8;
+      ctx.save();
+      ctx.translate(penX, penY);
+      ctx.rotate(0.35);
+      ctx.fillStyle = '#D4A338';
+      ctx.fillRect(0, 0, 24, 3);
+      ctx.fillStyle = '#2B2B2B';
+      ctx.beginPath();
+      ctx.moveTo(24, 0);
+      ctx.lineTo(28, 1.5);
+      ctx.lineTo(24, 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // D. Wooden Hourglass Timer (Next to Journal)
+    const hgX = journalX + journalW + 28;
+    const hgY = deskY + 6;
+    const hgW = 18;
+    const hgH = 28;
+
+    if (hgX + hgW < width - 25) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(hgX, hgY + hgH, 10, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#8B5A2B';
+      ctx.fillRect(hgX - hgW / 2, hgY - 2, hgW, 3);
+      ctx.fillRect(hgX - hgW / 2, hgY + hgH - 1, hgW, 3);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(hgX - hgW / 2 + 2, hgY + 1);
+      ctx.lineTo(hgX - 2, hgY + hgH / 2);
+      ctx.lineTo(hgX - hgW / 2 + 2, hgY + hgH - 1);
+      ctx.moveTo(hgX + hgW / 2 - 2, hgY + 1);
+      ctx.lineTo(hgX + 2, hgY + hgH / 2);
+      ctx.lineTo(hgX + hgW / 2 - 2, hgY + hgH - 1);
+      ctx.stroke();
+
+      ctx.fillStyle = '#D4A338';
+      ctx.beginPath();
+      ctx.arc(hgX, hgY + hgH - 4, 5, Math.PI, Math.PI * 2);
       ctx.fill();
     }
 
-    // 6. FOCUS MODE DIMMING OVERLAY
+    // E. Vintage Camera (Far Right Corner)
+    const camX = Math.min(width - 45, width * 0.92);
+    const camY = deskY + 10;
+    const camW = 32;
+    const camH = 20;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
+    ctx.fillRect(camX - camW / 2, camY + camH - 2, camW, 4);
+
+    ctx.fillStyle = '#2A2A2A';
+    ctx.beginPath();
+    drawRectRounded(ctx, camX - camW / 2, camY, camW, camH, 3);
+    ctx.fill();
+
+    ctx.fillStyle = '#C0C0C0';
+    ctx.fillRect(camX - camW / 2, camY, camW, 5);
+
+    ctx.fillStyle = '#1A1A1A';
+    ctx.beginPath();
+    ctx.arc(camX, camY + camH * 0.55, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#808080';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.beginPath();
+    ctx.arc(camX - 2, camY + camH * 0.55 - 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 7. FOCUS MODE DIMMING OVERLAY
     if (isFocused) {
       ctx.fillStyle = 'rgba(13, 13, 14, 0.65)';
       ctx.fillRect(0, 0, width, height);

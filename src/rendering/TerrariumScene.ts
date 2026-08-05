@@ -8,8 +8,8 @@
  *   Layer 2: Background Moss & Secondary Flora
  *   Layer 1: Inner Bioluminescence & Ambient Backlight
  *
- * Integrates the side-profile RoomScene backdrop (wall, window, shelves, desk, lamp)
- * placing the terrarium dome squarely on the desk surface in Room View.
+ * Integrates the side-profile RoomScene backdrop (wall, window, shelves, desk, props)
+ * rendering the terrarium as a bell-jar glass cloche resting on a wooden tray base in Room View.
  *
  * Implements robust WebGL context loss recovery (`webglcontextrestored`) and
  * Canvas 2D fallback composition.
@@ -116,7 +116,6 @@ export class TerrariumScene {
 
     this.uniforms = { ...DEFAULT_GLASS_UNIFORMS };
 
-    // WebGL Context Loss & Restoration Event Handlers
     this.canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
       console.warn('[YearGlass] WebGL context lost — switching to Canvas2D fallback');
@@ -207,8 +206,8 @@ export class TerrariumScene {
     const baseScale = this.cameraZoom || 1.0;
     const r = Math.min(cssWidth, cssHeight) * roomScale * baseScale;
 
-    const deskY = cssHeight * 0.67;
-    const roomCy = deskY - r * 0.88;
+    const deskY = cssHeight * 0.62;
+    const roomCy = deskY - r * 0.60;
     const focusCy = cssHeight * 0.48;
     const focusProgress = Math.min(1, Math.max(0, (baseScale - 1.0) / 1.4));
     const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
@@ -218,7 +217,7 @@ export class TerrariumScene {
     const dy = y - cy;
     const dist = Math.hypot(dx, dy);
 
-    if (dist <= r * 1.1) {
+    if (dist <= r * 1.15) {
       return {
         hit: true,
         normX: Math.max(-1, Math.min(1, dx / r)),
@@ -332,11 +331,11 @@ export class TerrariumScene {
 
     const activeFocus = this.isFocused || this.cameraZoom > 1.25;
 
-    // Layer 0: Side-Profile Room Backdrop (Wall, Window, Shelves, Desk, Lamp)
+    // Layer 0: Side-Profile Room Backdrop (Wall, Window, Shelves, Desk, Props)
     if (this.roomScene) {
       this.roomScene.draw(ctx, cssWidth, cssHeight, activeFocus);
     } else {
-      ctx.fillStyle = '#F3EFE6';
+      ctx.fillStyle = '#F4EFEA';
       ctx.fillRect(0, 0, cssWidth, cssHeight);
     }
 
@@ -347,154 +346,295 @@ export class TerrariumScene {
     const baseScale = this.cameraZoom || 1.0;
     const r = Math.min(cssWidth, cssHeight) * roomScale * baseScale;
 
-    // Calculate dome center:
-    // In Room View, rest bottom of dome squarely on top of desk surface (deskY = cssHeight * 0.67)
-    // In Focus View, center dome near vertical middle (cssHeight * 0.48)
-    const deskY = cssHeight * 0.67;
-    const roomCy = deskY - r * 0.88;
-    const focusCy = cssHeight * 0.48;
+    const deskY = cssHeight * 0.62;
 
-    const focusProgress = Math.min(1, Math.max(0, (baseScale - 1.0) / 1.4));
-    const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
-    const cy = roomCy + (focusCy - roomCy) * focusProgress + this.cameraOffsetY * cssHeight;
+    if (!activeFocus) {
+      // === ROOM VIEW: Glass Cloche Bell Jar resting on a Wooden Tray Base ===
+      const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
+      const trayY = deskY + 4 + this.cameraOffsetY * cssHeight;
+      const domeW = Math.min(cssWidth * 0.38, 250);
+      const domeH = domeW * 0.68;
+      const domeTopY = trayY - domeH;
 
-    // Layer 1: Bioluminescent Ambient Backlight inside dome
-    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    bg.addColorStop(0, '#1c3e32');
-    bg.addColorStop(0.7, '#122820');
-    bg.addColorStop(1, 'rgba(5, 12, 8, 0.92)');
-    ctx.fillStyle = bg;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Layer 2: Background Moss & Soil Bed
-    ctx.fillStyle = this.soilMoisture > 0.4 ? '#284a37' : '#33382c';
-    for (let i = 0; i < 28; i++) {
-      const a = (i / 28) * Math.PI * 2;
-      const d = (0.18 + (i % 6) * 0.11) * r;
-      const x = cx + Math.cos(a) * d;
-      const y = cy + Math.sin(a) * d;
+      // 1. Wooden Pedestal / Tray Base on Desk Surface
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
       ctx.beginPath();
-      ctx.arc(x, y, 3.5 + (i % 5) * 2.2, 0, Math.PI * 2);
+      ctx.ellipse(cx, trayY + 4, domeW * 0.55, 10, 0, 0, Math.PI * 2);
       ctx.fill();
-    }
 
-    // Layer 3: Flora & Plants
-    for (const plant of this.plantNodes) {
-      const px = cx + (plant.x - 0.5) * r * 1.2;
-      const py = cy + (plant.y - 0.5) * r * 1.2;
-      const size = 12 + plant.growth * 28;
+      // Wooden Saucer Rim
+      ctx.fillStyle = '#3D271D';
+      ctx.beginPath();
+      ctx.ellipse(cx, trayY, domeW * 0.52, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
 
+      ctx.fillStyle = '#5C3A21';
+      ctx.beginPath();
+      ctx.ellipse(cx, trayY - 2, domeW * 0.50, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Cloche Soil Bed & Bioluminescence
       ctx.save();
-      ctx.translate(px, py);
+      ctx.beginPath();
+      ctx.moveTo(cx - domeW * 0.48, trayY - 2);
+      ctx.lineTo(cx - domeW * 0.48, trayY - domeH * 0.55);
+      ctx.bezierCurveTo(
+        cx - domeW * 0.48, domeTopY,
+        cx + domeW * 0.48, domeTopY,
+        cx + domeW * 0.48, trayY - domeH * 0.55
+      );
+      ctx.lineTo(cx + domeW * 0.48, trayY - 2);
+      ctx.closePath();
+      ctx.clip();
 
-      if (plant.species === 'moss') {
-        ctx.fillStyle = '#3a7a50';
-        ctx.beginPath();
-        ctx.arc(0, 0, size * 0.65, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#529c6b';
-        ctx.beginPath();
-        ctx.arc(-size * 0.2, -size * 0.2, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (plant.species === 'fern') {
-        ctx.strokeStyle = '#438a58';
-        ctx.lineWidth = 3;
-        for (let frond = -2; frond <= 2; frond++) {
+      // Bioluminescent atmosphere inside cloche
+      const bg = ctx.createRadialGradient(cx, trayY - domeH * 0.4, 0, cx, trayY - domeH * 0.4, domeW * 0.6);
+      bg.addColorStop(0, '#1c3e32');
+      bg.addColorStop(0.7, '#122820');
+      bg.addColorStop(1, 'rgba(5, 12, 8, 0.90)');
+      ctx.fillStyle = bg;
+      ctx.fillRect(cx - domeW, domeTopY - 10, domeW * 2, domeH + 20);
+
+      // Soil bed inside cloche
+      ctx.fillStyle = this.soilMoisture > 0.4 ? '#284a37' : '#33382c';
+      ctx.beginPath();
+      ctx.ellipse(cx, trayY - 4, domeW * 0.46, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Plants inside Cloche
+      for (const plant of this.plantNodes) {
+        const px = cx + (plant.x - 0.5) * domeW * 0.8;
+        const py = trayY - 8 - plant.y * domeH * 0.5;
+        const pSize = 10 + plant.growth * 22;
+
+        ctx.save();
+        ctx.translate(px, py);
+
+        if (plant.species === 'moss') {
+          ctx.fillStyle = '#3a7a50';
+          ctx.beginPath();
+          ctx.arc(0, 0, pSize * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (plant.species === 'fern') {
+          ctx.strokeStyle = '#438a58';
+          ctx.lineWidth = 2.5;
+          for (let frond = -2; frond <= 2; frond++) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(frond * 7, -pSize * 0.8, frond * 12, -pSize * 1.0);
+            ctx.stroke();
+          }
+        } else if (plant.species === 'orchid') {
+          ctx.strokeStyle = '#4e8d5e';
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(0, 0);
-          ctx.quadraticCurveTo(frond * 9, -size * 0.85, frond * 14, -size * 1.1);
+          ctx.lineTo(0, -pSize);
+          ctx.stroke();
+          if (plant.growth > 0.35) {
+            ctx.fillStyle = '#e6a2b8';
+            ctx.beginPath();
+            ctx.arc(0, -pSize, 5 + plant.growth * 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (plant.species === 'vine') {
+          ctx.strokeStyle = '#326243';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, pSize * 0.7, 0, Math.PI * 1.5);
           ctx.stroke();
         }
-      } else if (plant.species === 'orchid') {
-        ctx.strokeStyle = '#4e8d5e';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, -size);
-        ctx.stroke();
-        if (plant.growth > 0.35) {
-          ctx.fillStyle = '#e6a2b8';
-          ctx.beginPath();
-          ctx.arc(0, -size, 6 + plant.growth * 4, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#f4c0d0';
-          ctx.beginPath();
-          ctx.arc(0, -size, 2.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      } else if (plant.species === 'vine') {
-        ctx.strokeStyle = '#326243';
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.arc(0, 0, size * 0.75, 0, Math.PI * 1.6);
-        ctx.stroke();
+        ctx.restore();
       }
-      ctx.restore();
+
+      // Pip the Ladybug inside Cloche
+      if (this.pipObservation) {
+        const pipX = cx + (this.pipObservation.x - 0.5) * domeW * 0.7;
+        const pipY = trayY - 10 - this.pipObservation.y * domeH * 0.45;
+
+        ctx.save();
+        ctx.translate(pipX, pipY);
+        ctx.fillStyle = '#e24838';
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#111111';
+        ctx.beginPath();
+        ctx.arc(0, -4.5, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.restore(); // end clip
+
+      // 3. Cloche Glass Shell Reflection & Outlines
+      ctx.strokeStyle = 'rgba(188, 216, 238, 0.75)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - domeW * 0.48, trayY - 2);
+      ctx.lineTo(cx - domeW * 0.48, trayY - domeH * 0.55);
+      ctx.bezierCurveTo(
+        cx - domeW * 0.48, domeTopY,
+        cx + domeW * 0.48, domeTopY,
+        cx + domeW * 0.48, trayY - domeH * 0.55
+      );
+      ctx.lineTo(cx + domeW * 0.48, trayY - 2);
+      ctx.stroke();
+
+      // Glass Specular Curve Highlight along Left Arch
+      const specGrad = ctx.createLinearGradient(cx - domeW * 0.42, domeTopY, cx - domeW * 0.2, trayY);
+      specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      specGrad.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
+      ctx.strokeStyle = specGrad;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - domeW * 0.42, trayY - domeH * 0.2);
+      ctx.lineTo(cx - domeW * 0.42, trayY - domeH * 0.55);
+      ctx.bezierCurveTo(
+        cx - domeW * 0.42, domeTopY + 10,
+        cx - domeW * 0.2, domeTopY + 5,
+        cx - domeW * 0.1, domeTopY + 8
+      );
+      ctx.stroke();
+    } else {
+      // === FOCUS MODE: Full Screen Close-up Inspect Dome ===
+      const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
+      const cy = cssHeight * 0.48 + this.cameraOffsetY * cssHeight;
+
+      // Layer 1: Bioluminescent Ambient Backlight inside dome
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      bg.addColorStop(0, '#1c3e32');
+      bg.addColorStop(0.7, '#122820');
+      bg.addColorStop(1, 'rgba(5, 12, 8, 0.92)');
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Background Moss & Soil Bed
+      ctx.fillStyle = this.soilMoisture > 0.4 ? '#284a37' : '#33382c';
+      for (let i = 0; i < 28; i++) {
+        const a = (i / 28) * Math.PI * 2;
+        const d = (0.18 + (i % 6) * 0.11) * r;
+        const x = cx + Math.cos(a) * d;
+        const y = cy + Math.sin(a) * d;
+        ctx.beginPath();
+        ctx.arc(x, y, 3.5 + (i % 5) * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Layer 3: Flora & Plants
+      for (const plant of this.plantNodes) {
+        const px = cx + (plant.x - 0.5) * r * 1.2;
+        const py = cy + (plant.y - 0.5) * r * 1.2;
+        const size = 12 + plant.growth * 28;
+
+        ctx.save();
+        ctx.translate(px, py);
+
+        if (plant.species === 'moss') {
+          ctx.fillStyle = '#3a7a50';
+          ctx.beginPath();
+          ctx.arc(0, 0, size * 0.65, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#529c6b';
+          ctx.beginPath();
+          ctx.arc(-size * 0.2, -size * 0.2, size * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (plant.species === 'fern') {
+          ctx.strokeStyle = '#438a58';
+          ctx.lineWidth = 3;
+          for (let frond = -2; frond <= 2; frond++) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(frond * 9, -size * 0.85, frond * 14, -size * 1.1);
+            ctx.stroke();
+          }
+        } else if (plant.species === 'orchid') {
+          ctx.strokeStyle = '#4e8d5e';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(0, -size);
+          ctx.stroke();
+          if (plant.growth > 0.35) {
+            ctx.fillStyle = '#e6a2b8';
+            ctx.beginPath();
+            ctx.arc(0, -size, 6 + plant.growth * 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#f4c0d0';
+            ctx.beginPath();
+            ctx.arc(0, -size, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (plant.species === 'vine') {
+          ctx.strokeStyle = '#326243';
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(0, 0, size * 0.75, 0, Math.PI * 1.6);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Layer 4: Pip the Ladybug
+      if (this.pipObservation) {
+        const pipX = cx + (this.pipObservation.x - 0.5) * r * 1.1;
+        const pipY = cy + (this.pipObservation.y - 0.5) * r * 1.1;
+
+        ctx.save();
+        ctx.translate(pipX, pipY);
+
+        ctx.fillStyle = '#e24838';
+        ctx.beginPath();
+        ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        ctx.arc(-2, -2, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#111111';
+        ctx.beginPath();
+        ctx.arc(0, -5.5, 3.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-1.5, -6.5, 0.8, 0, Math.PI * 2);
+        ctx.arc(1.5, -6.5, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#111111';
+        ctx.beginPath();
+        ctx.arc(-3, -1, 1.3, 0, Math.PI * 2);
+        ctx.arc(3, -1, 1.3, 0, Math.PI * 2);
+        ctx.arc(0, 3.2, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // Layer 5: Glass Rim & Specular Gradient
+      ctx.strokeStyle = '#2d2218';
+      ctx.lineWidth = Math.max(3, r * 0.07);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(188, 216, 238, 0.65)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const spec = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, 0, cx - r * 0.35, cy - r * 0.35, r * 0.45);
+      spec.addColorStop(0, 'rgba(255,255,255,0.28)');
+      spec.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = spec;
+      ctx.fillRect(0, 0, width, height);
     }
-
-    // Layer 4: Pip the Ladybug
-    if (this.pipObservation) {
-      const pipX = cx + (this.pipObservation.x - 0.5) * r * 1.1;
-      const pipY = cy + (this.pipObservation.y - 0.5) * r * 1.1;
-
-      ctx.save();
-      ctx.translate(pipX, pipY);
-
-      // Shell & Glossy Highlight
-      ctx.fillStyle = '#e24838';
-      ctx.beginPath();
-      ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.beginPath();
-      ctx.arc(-2, -2, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Head & Antennae
-      ctx.fillStyle = '#111111';
-      ctx.beginPath();
-      ctx.arc(0, -5.5, 3.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Eye dots
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-1.5, -6.5, 0.8, 0, Math.PI * 2);
-      ctx.arc(1.5, -6.5, 0.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Spots
-      ctx.fillStyle = '#111111';
-      ctx.beginPath();
-      ctx.arc(-3, -1, 1.3, 0, Math.PI * 2);
-      ctx.arc(3, -1, 1.3, 0, Math.PI * 2);
-      ctx.arc(0, 3.2, 1.3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-    }
-
-    // Layer 5: Glass Rim & Specular Gradient
-    ctx.strokeStyle = '#2d2218';
-    ctx.lineWidth = Math.max(3, r * 0.07);
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(188, 216, 238, 0.65)';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-
-    const spec = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, 0, cx - r * 0.35, cy - r * 0.35, r * 0.45);
-    spec.addColorStop(0, 'rgba(255,255,255,0.28)');
-    spec.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = spec;
-    ctx.fillRect(0, 0, width, height);
   }
 
   get domElement(): HTMLCanvasElement {
