@@ -2,7 +2,8 @@
  * YearGlass Sanctuary — Camera Controller
  *
  * Hardcoded default initial state to ROOM view mode (`zoom = 1.0`, `isFocused = false`).
- * Smoothly interpolates camera zoom between ROOM and FOCUS modes upon explicit interaction.
+ * Separates ROOM_VIEW_SCALE (0.38) from FOCUS_VIEW_SCALE (1.8) so the terrarium dome
+ * occupies ~35-38% of canvas height in Room View, keeping the room backdrop fully visible.
  */
 
 export interface CameraView {
@@ -15,6 +16,9 @@ export interface CameraView {
 const MOBILE_BREAKPOINT = 768;
 const IDLE_LIGHT = 0.35;
 const ACTIVE_LIGHT = 0.95;
+
+export const ROOM_VIEW_SCALE = 0.38;
+export const FOCUS_VIEW_SCALE = 1.8;
 
 export class CameraController {
   private view: CameraView = { zoom: 1.0, offsetX: 0, offsetY: 0, focusMode: false };
@@ -81,16 +85,16 @@ export class CameraController {
     const isMobile = width < MOBILE_BREAKPOINT || aspect < 1.2;
 
     if (this.target.focusMode) {
-      this.target.zoom = isMobile ? 1.75 : 1.65;
+      this.target.zoom = isMobile ? (FOCUS_VIEW_SCALE / ROOM_VIEW_SCALE) * 1.05 : (FOCUS_VIEW_SCALE / ROOM_VIEW_SCALE);
       this.target.offsetX = 0;
       this.target.offsetY = 0;
       return;
     }
 
     if (isMobile) {
-      this.target.zoom = Math.max(1.0, Math.min(1.2, 1.1 / aspect));
+      this.target.zoom = Math.max(1.0, Math.min(1.15, 1.08 / aspect));
       this.target.offsetX = 0;
-      this.target.offsetY = -0.04;
+      this.target.offsetY = -0.03;
     } else {
       this.target.zoom = 1.0;
       this.target.offsetX = 0;
@@ -137,6 +141,10 @@ export class CameraController {
 
   get isFocused(): boolean {
     return this.target.focusMode || this.view.focusMode;
+  }
+
+  get currentScaleFactor(): number {
+    return this.isFocused ? FOCUS_VIEW_SCALE : ROOM_VIEW_SCALE;
   }
 
   update(dt: number): void {

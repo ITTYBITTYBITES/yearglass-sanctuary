@@ -13,6 +13,7 @@
  */
 
 import { GlassProgram, DEFAULT_GLASS_UNIFORMS, GlassUniforms } from './shaders';
+import { ROOM_VIEW_SCALE } from './CameraController';
 import type { PlantNode } from '../simulation/GrowthSystem';
 import type { PipObservation } from '../simulation/PipAI';
 
@@ -292,7 +293,7 @@ export class TerrariumScene {
 
     const cx = width / 2;
     const cy = height / 2;
-    const r = Math.min(width, height) * 0.42;
+    const r = Math.min(width, height) * ROOM_VIEW_SCALE;
 
     // Layer 1: Bioluminescent Ambient Backlight inside dome
     const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
