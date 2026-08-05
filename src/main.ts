@@ -7,7 +7,7 @@
 
 import { SimulationEngine } from './simulation/SimulationEngine';
 
-const CURRENT_BUILD_VERSION = '1.0.5-20260805-v7';
+const CURRENT_BUILD_VERSION = '1.0.6-20260805-v8';
 
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   let refreshing = false;
