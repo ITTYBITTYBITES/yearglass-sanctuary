@@ -1,7 +1,7 @@
 /**
  * YearGlass Sanctuary — Terrarium Scene (5-layer depth stack & hit-testing)
  *
- * The terrarium is rendered into a WebGL2 framebuffer in five ordered layers:
+ * The terrarium is rendered into a WebGL2 framebuffer or Canvas 2D fallback in five ordered layers:
  *   Layer 5: Glass Highlight & Distortion Filter (refraction/specular/rim)
  *   Layer 4: Foreground Soil Edge & Overhanging Flora
  *   Layer 3: Active Stage (Pip FSM + primary growth nodes)
@@ -9,7 +9,7 @@
  *   Layer 1: Inner Bioluminescence & Ambient Backlight
  *
  * Integrates the side-profile RoomScene backdrop (wall, window, shelves, desk, props)
- * rendering the terrarium as a clear bell-jar glass cloche resting flat on a wooden tray base on the desk surface in Room View.
+ * rendering the terrarium as a clear bell-jar glass cloche resting flat on a wooden tray base on DESK_SURFACE_Y in Room View.
  *
  * Implements hit-testing for terrarium dome and interactive desk props (camera, journal, lamp, mug, radio, window, shelf),
  * and snapshot capture for Photo mode.
@@ -19,7 +19,6 @@
  */
 
 import { GlassProgram, DEFAULT_GLASS_UNIFORMS, GlassUniforms } from './shaders';
-import { ROOM_VIEW_SCALE } from './CameraController';
 import type { RoomScene } from './RoomScene';
 import type { PlantNode } from '../simulation/GrowthSystem';
 import type { PipObservation } from '../simulation/PipAI';
@@ -224,83 +223,84 @@ export class TerrariumScene {
 
     const cssWidth = rect.width;
     const cssHeight = rect.height;
+    const visibleHeight = Math.max(100, cssHeight - 210);
+    const DESK_SURFACE_Y = visibleHeight * 0.72;
+
     const cx = cssWidth / 2;
+    const isMobile = cssWidth <= 600;
 
-    const aspect = cssWidth / Math.max(1, cssHeight);
-    const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
-    const roomScale = ROOM_VIEW_SCALE * portraitFactor;
-    const baseScale = this.cameraZoom || 1.0;
-    const r = Math.min(cssWidth, cssHeight) * roomScale * baseScale;
+    const clocheW = Math.min(cssWidth * (isMobile ? 0.36 : 0.38), 240);
+    const clocheH = clocheW * 0.68;
 
-    const deskY = cssHeight * 0.62;
+    const roomCy = DESK_SURFACE_Y - clocheH / 2;
+    const focusCy = visibleHeight * 0.45;
+    const focusProgress = Math.min(1.0, Math.max(0.0, ((this.cameraZoom || 1.0) - 1.0) / 0.65));
 
-    // 1. Check Terrarium Dome
-    const roomCy = deskY - r * 0.60;
-    const focusCy = cssHeight * 0.48;
-    const focusProgress = Math.min(1, Math.max(0, (baseScale - 1.0) / 1.4));
     const domeCx = cx + this.cameraOffsetX * cssWidth;
     const domeCy = roomCy + (focusCy - roomCy) * focusProgress + this.cameraOffsetY * cssHeight;
+    const domeRadius = (clocheW * 0.58) + (Math.min(cssWidth, visibleHeight) * 0.40 - clocheW * 0.58) * focusProgress;
 
+    // 1. Check Glass Terrarium Dome
     const dx = x - domeCx;
     const dy = y - domeCy;
-    if (Math.hypot(dx, dy) <= r * 1.18) {
+    if (Math.hypot(dx, dy) <= domeRadius * 1.18) {
       return {
         type: 'dome',
-        normX: Math.max(-1, Math.min(1, dx / r)),
-        normY: Math.max(-1, Math.min(1, dy / r)),
+        normX: Math.max(-1, Math.min(1, dx / domeRadius)),
+        normY: Math.max(-1, Math.min(1, dy / domeRadius)),
       };
     }
 
-    // Interactive desk props active in Room View
-    if (!this.isFocused) {
-      // 2. Camera (Far Right Desk)
-      const camX = Math.min(cssWidth - 24, cx + (Math.min(cssWidth * 0.38, 240)) * 0.50 + 120);
-      const camY = deskY + 6;
-      if (Math.abs(x - camX) < 28 && Math.abs(y - camY) < 25) {
+    // Interactive desk props active in Room View (when not zoomed into Focus Mode)
+    if (!this.isFocused && focusProgress < 0.2) {
+      const minPadding = isMobile ? 45 : 60;
+      const lampX = Math.max(18, cssWidth * 0.08);
+      const mugX = Math.max(lampX + minPadding, cx - clocheW * 0.76);
+      const radioX = Math.max(mugX + minPadding, cx - clocheW * 0.48);
+
+      const journalX = Math.min(cx + clocheW * 0.48, cssWidth * 0.62);
+      const hgX = journalX + minPadding;
+      const camX = Math.min(cssWidth - 25, hgX + minPadding);
+
+      // 2. Vintage Camera (Far Right Corner)
+      if (Math.abs(x - camX) < 32 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y + 6)) < 28) {
         return { type: 'camera', normX: 0, normY: 0 };
       }
 
       // 3. Journal & Hourglass (Right of Dome)
-      const clocheW = Math.min(cssWidth * 0.38, 240);
-      const journalX = Math.min(cx + clocheW * 0.50, cssWidth * 0.65);
-      const journalY = deskY + 2;
-      if (x >= journalX - 10 && x <= journalX + 130 && y >= journalY - 15 && y <= journalY + 50) {
+      if (x >= journalX - 10 && x <= hgX + 25 && Math.abs(y - (DESK_SURFACE_Y + 2)) < 30) {
         return { type: 'journal', normX: 0, normY: 0 };
       }
 
       // 4. Coffee Mug (Left of Dome)
-      const lampX = Math.max(18, cssWidth * 0.12);
-      const mugX = Math.max(lampX + 28, cx - clocheW * 0.76);
-      const mugY = deskY + 4;
-      if (Math.abs(x - mugX) < 22 && Math.abs(y - mugY) < 24) {
+      if (Math.abs(x - mugX) < 26 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y + 4)) < 28) {
         return { type: 'mug', normX: 0, normY: 0 };
       }
 
-      // 5. Radio (Left of Dome)
-      const radioX = Math.max(mugX + 24, cx - clocheW * 0.55);
-      const radioY = deskY + 2;
-      if (Math.abs(x - radioX) < 24 && Math.abs(y - radioY) < 24) {
+      // 5. Retro Radio (Left of Dome)
+      if (Math.abs(x - radioX) < 28 * (isMobile ? 1.2 : 1.0) && Math.abs(y - (DESK_SURFACE_Y + 2)) < 28) {
         return { type: 'radio', normX: 0, normY: 0 };
       }
 
-      // 6. Lamp (Left Desk)
-      if (Math.abs(x - lampX) < 35 && y >= deskY - cssHeight * 0.25 && y <= deskY + 20) {
+      // 6. Workspace Lamp (Far Left)
+      if (Math.abs(x - lampX) < 35 && y >= DESK_SURFACE_Y - cssHeight * 0.25 && y <= DESK_SURFACE_Y + 30) {
         return { type: 'lamp', normX: 0, normY: 0 };
       }
 
       // 7. Window (Centered Wall)
-      const windowW = Math.min(cssWidth * 0.44, 340);
-      const windowH = Math.min(cssHeight * 0.34, 240);
-      const windowX = (cssWidth - windowW) / 2;
-      const windowY = cssHeight * 0.10;
+      const windowW = isMobile ? Math.min(cssWidth * 0.52, 220) : Math.min(cssWidth * 0.42, 340);
+      const windowH = isMobile ? Math.min(visibleHeight * 0.32, 170) : Math.min(visibleHeight * 0.38, 240);
+      const shelfX = Math.max(10, cssWidth * 0.03);
+      const shelfW = isMobile ? Math.min(cssWidth * 0.18, 90) : Math.min(cssWidth * 0.22, 150);
+      const windowX = Math.max((cssWidth - windowW) / 2, shelfX + shelfW + 18);
+      const windowY = Math.max(16, visibleHeight * 0.08);
+
       if (x >= windowX && x <= windowX + windowW && y >= windowY && y <= windowY + windowH) {
         return { type: 'window', normX: 0, normY: 0 };
       }
 
       // 8. Shelves (Left Wall)
-      const shelfX = Math.max(12, cssWidth * 0.04);
-      const shelfW = Math.min(cssWidth * 0.22, 160);
-      if (x >= shelfX - 10 && x <= shelfX + shelfW + 10 && y >= cssHeight * 0.20 && y <= cssHeight * 0.52) {
+      if (x >= shelfX - 10 && x <= shelfX + shelfW + 10 && y >= visibleHeight * 0.18 && y <= visibleHeight * 0.45) {
         return { type: 'shelf', normX: 0, normY: 0 };
       }
     }
@@ -410,6 +410,9 @@ export class TerrariumScene {
     const cssWidth = this.container.clientWidth || window.innerWidth || width;
     const cssHeight = this.container.clientHeight || window.innerHeight || height;
 
+    const visibleHeight = Math.max(100, cssHeight - 210);
+    const DESK_SURFACE_Y = visibleHeight * 0.72;
+
     const activeFocus = this.isFocused || this.cameraZoom > 1.25;
 
     // Layer 0: Side-Profile Room Backdrop (Wall, Window, Shelves, Desk, Props)
@@ -420,25 +423,16 @@ export class TerrariumScene {
       ctx.fillRect(0, 0, cssWidth, cssHeight);
     }
 
-    const aspect = cssWidth / Math.max(1, cssHeight);
-    const portraitFactor = aspect < 1.0 ? Math.max(0.35, aspect * 0.55) : 1.0;
-    const roomScale = ROOM_VIEW_SCALE * portraitFactor;
-
-    const baseScale = this.cameraZoom || 1.0;
-    const r = Math.min(cssWidth, cssHeight) * roomScale * baseScale;
-
-    const deskY = cssHeight * 0.62;
-
     if (!activeFocus) {
       // === ROOM VIEW: Clear Bell Jar Glass Cloche resting flat on Wooden Tray Base ===
       const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
-      const trayY = deskY + 2 + this.cameraOffsetY * cssHeight; // Sits flat on tabletop
-      const isMobile = cssWidth < 500;
+      const trayY = DESK_SURFACE_Y + 2 + this.cameraOffsetY * cssHeight; // Sits flat on DESK_SURFACE_Y
+      const isMobile = cssWidth <= 600;
       const domeW = Math.min(cssWidth * (isMobile ? 0.36 : 0.38), 240);
       const domeH = domeW * 0.68;
       const domeTopY = trayY - domeH;
 
-      // 1. Wooden Pedestal / Tray Base flat on Desk Surface
+      // 1. Wooden Saucer / Tray Base flat on Desk Surface
       ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
       ctx.beginPath();
       ctx.ellipse(cx, trayY + 4, domeW * 0.52, 9, 0, 0, Math.PI * 2);
@@ -469,7 +463,7 @@ export class TerrariumScene {
       ctx.closePath();
       ctx.clip();
 
-      // Transparent/luminous atmosphere inside cloche (plants are crisp & visible!)
+      // Transparent/luminous atmosphere inside cloche (plants crisp & visible)
       const bg = ctx.createRadialGradient(cx, trayY - domeH * 0.4, 0, cx, trayY - domeH * 0.4, domeW * 0.6);
       bg.addColorStop(0, 'rgba(28, 62, 50, 0.72)');
       bg.addColorStop(0.7, 'rgba(18, 40, 32, 0.65)');
@@ -581,7 +575,8 @@ export class TerrariumScene {
     } else {
       // === FOCUS MODE: Full Screen Close-up Inspect Dome ===
       const cx = cssWidth / 2 + this.cameraOffsetX * cssWidth;
-      const cy = cssHeight * 0.48 + this.cameraOffsetY * cssHeight;
+      const cy = visibleHeight * 0.45 + this.cameraOffsetY * cssHeight;
+      const r = Math.min(cssWidth, visibleHeight) * 0.40 * (this.cameraZoom || 1.0);
 
       // Layer 1: Bioluminescent Ambient Backlight inside dome
       const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);

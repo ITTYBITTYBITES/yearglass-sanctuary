@@ -1,21 +1,26 @@
 /**
  * YearGlass Sanctuary — Room Scene
  *
- * Adaptive dual-mode layout engine:
- *   - Mobile Portrait Mode (height > width):
- *       * Streamlined, touch-optimized portrait layout
- *       * Shorter vertically-framed window in top third
- *       * Thick wooden desk baseline at DESK_SURFACE_Y (height * 0.62)
- *       * Enlarged, high-contrast, touch-friendly interactive targets (>= 44x44px touch bounds)
- *       * Dark cozy night wallpaper (#0F121C) at night, warm cream (#F6F1EC) during day
- *   - Desktop Landscape Mode (height <= width):
- *       * Full 16:9 wide scene with 4-pane window, left shelves with books & succulents,
- *         right wall hanging art frames (strictly clipped), wide mahogany desk & props
+ * Mobile-First Canvas Layout Engine:
+ *   - Base / Default Mobile Portrait Mode (width <= 600 or height > width):
+ *       * Visible scene height above control sheet: visibleHeight = height - 210
+ *       * Wooden desk surface top baseline anchored at DESK_SURFACE_Y = visibleHeight * 0.72
+ *       * Thick, 3D-beveled wooden desk from DESK_SURFACE_Y down to height (covering visibleHeight + 40px and beyond)
+ *       * Props scaled up by 2.0x for clear readability on mobile
+ *       * Minimum horizontal padding (>= 45px) between Mug, Radio, Journal, Hourglass, Camera
+ *   - Widescreen / Desktop Mode (width > 600):
+ *       * DESK_SURFACE_Y stays anchored to visibleHeight * 0.72 without vertical warping/stretching
+ *       * Spreads out props with generous spacing across the wide mahogany desktop
  */
 
 export interface RoomState {
   lampOn: boolean;
   night: boolean;
+}
+
+export function getDeskSurfaceY(height: number): number {
+  const visibleHeight = Math.max(100, height - 210);
+  return visibleHeight * 0.72;
 }
 
 export class RoomScene {
@@ -38,7 +43,7 @@ export class RoomScene {
     this.windowFrame = document.createElement('div');
     this.windowFrame.className = 'yearglass-room-window';
     this.windowFrame.style.cssText =
-      'position:absolute;top:10%;left:50%;transform:translateX(-50%);width:min(42%, 320px);height:min(34%, 230px);' +
+      'position:absolute;top:8%;left:50%;transform:translateX(-50%);width:min(42%, 320px);height:min(32%, 220px);' +
       'border-radius:10px;border:8px solid #6e472b;background:linear-gradient(180deg,#7b628a,#f0a85d,#fce4c6);' +
       'box-shadow:inset 0 0 25px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2);';
 
@@ -46,15 +51,15 @@ export class RoomScene {
     this.shelf = document.createElement('div');
     this.shelf.className = 'yearglass-room-shelf';
     this.shelf.style.cssText =
-      'position:absolute;top:26%;left:4%;width:min(24%, 170px);height:10px;' +
+      'position:absolute;top:22%;left:4%;width:min(22%, 160px);height:10px;' +
       'background:linear-gradient(180deg,#8b5a2b,#5c3a21);' +
       'border-bottom:2px solid #3d271d;box-shadow:0 6px 16px rgba(0,0,0,0.3);';
 
-    // Warm Wooden Desk Surface (Spanning lower third, bottom: 0)
+    // Warm Wooden Desk Surface
     this.desk = document.createElement('div');
     this.desk.className = 'yearglass-room-desk';
     this.desk.style.cssText =
-      'position:absolute;bottom:0;left:0;right:0;width:100%;height:38%;' +
+      'position:absolute;bottom:0;left:0;right:0;width:100%;height:40%;' +
       'background:linear-gradient(180deg,#6e4c2e 0%,#3b2312 100%);' +
       'border-top:4px solid #a67c4e;' +
       'box-shadow:inset 0 4px 20px rgba(0,0,0,0.5), 0 -8px 24px rgba(0,0,0,0.3);';
@@ -110,8 +115,13 @@ export class RoomScene {
     if (this.disposed) return;
     ctx.save();
 
-    const isPortrait = height > width;
+    const isPortrait = height > width || width <= 600;
     const isNight = this.state.night;
+
+    const visibleHeight = Math.max(100, height - 210);
+    const DESK_SURFACE_Y = visibleHeight * 0.72;
+    const deskY = DESK_SURFACE_Y;
+    const deskH = height - deskY;
 
     const drawRectRounded = (
       c: CanvasRenderingContext2D,
@@ -142,11 +152,11 @@ export class RoomScene {
     ctx.fillStyle = wallGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Wall wallpaper subtle vertical stripes
+    // Wall wallpaper subtle vertical stripes down to DESK_SURFACE_Y
     ctx.fillStyle = isNight ? 'rgba(255, 255, 255, 0.03)' : 'rgba(215, 202, 185, 0.18)';
     const stripeW = 28;
     for (let x = 0; x < width; x += stripeW * 2) {
-      ctx.fillRect(x, 0, stripeW, height * 0.62);
+      ctx.fillRect(x, 0, stripeW, DESK_SURFACE_Y);
     }
 
     // Top ceiling shadow
@@ -156,22 +166,18 @@ export class RoomScene {
     ctx.fillStyle = topShadow;
     ctx.fillRect(0, 0, width, 40);
 
-    // 2. DESK SURFACE (Anchored at deskY = 62% height)
-    const deskY = isPortrait ? height * 0.62 : Math.max(height * 0.65, height - 240);
-    const deskH = height - deskY;
-
-    // 3. WINDOW & SHELF POSITIONING (NO OVERLAP!)
+    // 2. WINDOW & SHELF POSITIONING (NO OVERLAP)
     const windowWidth = isPortrait
       ? Math.min(width * 0.52, 220)
       : Math.min(width * 0.42, 340);
     const windowHeight = isPortrait
-      ? Math.min(height * 0.26, 170)
-      : Math.min(height * 0.34, 240);
+      ? Math.min(visibleHeight * 0.32, 170)
+      : Math.min(visibleHeight * 0.38, 240);
 
     const shelfX = Math.max(10, width * 0.03);
     const shelfW = isPortrait ? Math.min(width * 0.18, 90) : Math.min(width * 0.22, 150);
-    const windowX = isPortrait ? Math.max((width - windowWidth) / 2 + 15, shelfX + shelfW + 18) : (width - windowWidth) / 2;
-    const windowY = height * 0.08;
+    const windowX = Math.max((width - windowWidth) / 2, shelfX + shelfW + 18);
+    const windowY = Math.max(16, visibleHeight * 0.08);
 
     // Window Outer Wooden Frame
     ctx.fillStyle = isNight ? '#4D301B' : '#6E472B';
@@ -247,9 +253,9 @@ export class RoomScene {
     ctx.closePath();
     ctx.fill();
 
-    // 4. LEFT WALL FLOATING SHELVES & DECOR (NO OVERLAP WITH WINDOW!)
-    const shelf1Y = height * 0.22;
-    const shelf2Y = height * 0.40;
+    // 3. LEFT WALL FLOATING SHELVES & DECOR
+    const shelf1Y = visibleHeight * 0.20;
+    const shelf2Y = visibleHeight * 0.38;
 
     const drawPlank = (sx: number, sy: number, sw: number) => {
       ctx.fillStyle = '#8B5A2B';
@@ -268,96 +274,108 @@ export class RoomScene {
       { color: '#A83232', w: 6, h: 18 },
       { color: '#D4A338', w: 8, h: 22 },
       { color: '#2E6B40', w: 7, h: 16 },
-      { color: '#2D4A8A', w: 8, h: 20 },
-      { color: '#C86446', w: 6, h: 15 },
+      { color: '#4A6B82', w: 9, h: 24 },
     ];
-    let bx = shelfX + 5;
+    let bx = shelfX + 8;
     for (const b of books) {
-      if (bx + b.w > shelfX + shelfW - 16) break;
       ctx.fillStyle = b.color;
       ctx.fillRect(bx, shelf1Y - b.h, b.w, b.h);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-      ctx.fillRect(bx + 2, shelf1Y - b.h + 3, b.w - 4, 2);
+      ctx.fillStyle = '#1A1A1A';
+      ctx.fillRect(bx + 1, shelf1Y - b.h + 3, b.w - 2, 2);
       bx += b.w + 2;
     }
 
-    // Small Potted Succulent on Upper Shelf
-    const potX = shelfX + shelfW - 18;
-    ctx.fillStyle = '#C86446';
+    // Succulent Pot on Shelf 1
+    const potX = shelfX + shelfW - 22;
+    const potY = shelf1Y;
+    ctx.fillStyle = '#C86D51';
     ctx.beginPath();
-    ctx.moveTo(potX - 5, shelf1Y - 10);
-    ctx.lineTo(potX + 5, shelf1Y - 10);
-    ctx.lineTo(potX + 4, shelf1Y);
-    ctx.lineTo(potX - 4, shelf1Y);
+    ctx.moveTo(potX - 8, potY - 14);
+    ctx.lineTo(potX + 8, potY - 14);
+    ctx.lineTo(potX + 6, potY);
+    ctx.lineTo(potX - 6, potY);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = '#529C6B';
+
+    ctx.fillStyle = '#4A7C59';
     ctx.beginPath();
-    ctx.arc(potX, shelf1Y - 14, 5, 0, Math.PI * 2);
+    ctx.arc(potX - 3, potY - 18, 5, 0, Math.PI * 2);
+    ctx.arc(potX + 3, potY - 18, 5, 0, Math.PI * 2);
+    ctx.arc(potX, potY - 22, 6, 0, Math.PI * 2);
     ctx.fill();
 
     // Lower Shelf 2
     drawPlank(shelfX, shelf2Y, shelfW);
 
-    // Two small potted plants on Lower Shelf
-    const pot2aX = shelfX + 14;
-    ctx.fillStyle = '#A06E3B';
-    ctx.fillRect(pot2aX - 4, shelf2Y - 8, 8, 8);
-    ctx.fillStyle = '#438A58';
+    // Small Jar on Shelf 2
+    const jarX = shelfX + 16;
+    const jarY = shelf2Y;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.40)';
+    ctx.fillRect(jarX - 7, jarY - 16, 14, 16);
+    ctx.fillStyle = '#8B5A2B';
+    ctx.fillRect(jarX - 8, jarY - 19, 16, 3);
+    ctx.fillStyle = '#D4A338';
     ctx.beginPath();
-    ctx.arc(pot2aX, shelf2Y - 11, 5, 0, Math.PI * 2);
+    ctx.arc(jarX, jarY - 8, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    const pot2bX = shelfX + shelfW - 22;
-    ctx.fillStyle = '#5C6B73';
-    ctx.fillRect(pot2bX - 5, shelf2Y - 10, 10, 10);
-    ctx.fillStyle = '#326243';
-    ctx.beginPath();
-    ctx.arc(pot2bX, shelf2Y - 14, 6, 0, Math.PI * 2);
-    ctx.fill();
+    // 4. RIGHT WALL HANGING ART FRAMES (Strictly Clipped with ctx.clip())
+    if (width > 500) {
+      const art1W = Math.min(width * 0.18, 120);
+      const art1H = art1W * 0.75;
+      const art1X = width - art1W - Math.max(16, width * 0.04);
+      const art1Y = visibleHeight * 0.16;
 
-    // 5. RIGHT WALL HANGING FRAMED ARTWORK (Strictly Clipped)
-    const art1X = Math.min(width * 0.78, windowX + windowWidth + 14);
-    const art1Y = height * 0.16;
-    const art1W = Math.min(width * (isPortrait ? 0.11 : 0.10), 65);
-    const art1H = art1W * 0.75;
+      ctx.fillStyle = isNight ? '#4D301B' : '#6E472B';
+      ctx.fillRect(art1X - 6, art1Y - 6, art1W + 12, art1H + 12);
 
-    if (art1X + art1W < width - 6) {
-      ctx.fillStyle = '#6E472B';
-      ctx.fillRect(art1X - 4, art1Y - 4, art1W + 8, art1H + 8);
+      ctx.fillStyle = '#FDFBF7';
+      ctx.fillRect(art1X, art1Y, art1W, art1H);
+
+      // Clipped Landscape Painting
       ctx.save();
       ctx.beginPath();
-      ctx.rect(art1X, art1Y, art1W, art1H);
-      ctx.clip(); // Clip so landscape hill never leaks outside frame!
+      ctx.rect(art1X + 4, art1Y + 4, art1W - 8, art1H - 8);
+      ctx.clip();
 
-      ctx.fillStyle = '#87CEEB';
+      const artSky = ctx.createLinearGradient(0, art1Y, 0, art1Y + art1H);
+      artSky.addColorStop(0, '#87CEEB');
+      artSky.addColorStop(1, '#E0F7FA');
+      ctx.fillStyle = artSky;
       ctx.fillRect(art1X, art1Y, art1W, art1H);
-      ctx.fillStyle = '#82A352';
+
+      ctx.fillStyle = '#E8985E';
       ctx.beginPath();
-      ctx.arc(art1X + art1W * 0.5, art1Y + art1H * 1.2, art1W * 0.7, 0, Math.PI * 2);
+      ctx.arc(art1X + art1W * 0.5, art1Y + art1H * 0.55, 12, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#FFD15C';
+
+      ctx.fillStyle = '#4A7C59';
       ctx.beginPath();
-      ctx.arc(art1X + art1W * 0.7, art1Y + art1H * 0.35, 4, 0, Math.PI * 2);
+      ctx.moveTo(art1X, art1Y + art1H);
+      ctx.lineTo(art1X + art1W * 0.45, art1Y + art1H * 0.48);
+      ctx.lineTo(art1X + art1W, art1Y + art1H);
+      ctx.closePath();
       ctx.fill();
+
       ctx.restore();
 
-      const art2X = art1X + art1W + 12;
-      const art2Y = art1Y;
-      const art2W = Math.min(width * 0.08, 50);
-      const art2H = art2W * 1.15;
+      // Lower Small Frame 2
+      if (width > 700) {
+        const art2W = art1W * 0.70;
+        const art2H = art2W * 0.85;
+        const art2X = art1X + art1W * 0.15;
+        const art2Y = art1Y + art1H + 22;
 
-      if (art2X + art2W < width - 6) {
         ctx.fillStyle = '#6E472B';
         ctx.fillRect(art2X - 4, art2Y - 4, art2W + 8, art2H + 8);
         ctx.fillStyle = '#FDFBF7';
         ctx.fillRect(art2X, art2Y, art2W, art2H);
         ctx.fillStyle = '#E2D8C5';
-        ctx.fillRect(art2X + 5, art2Y + 5, art2W - 10, art2H - 15);
+        ctx.fillRect(art2X + 5, art2Y + 5, art2W - 10, art2H - 10);
       }
     }
 
-    // 6. DESK SURFACE (Wood tabletop with front bevel edge & wood grain gradient)
+    // 5. THICK 3D-BEVELED WOODEN DESK (From DESK_SURFACE_Y down to height)
     ctx.fillStyle = isNight ? '#6E4C2E' : '#A67C4E';
     ctx.fillRect(0, deskY - 4, width, 4);
 
@@ -391,29 +409,32 @@ export class RoomScene {
     ctx.fillStyle = lipGrad;
     ctx.fillRect(0, deskY, width, 16);
 
-    // 7. ENLARGED 2.2X HIGH-CONTRAST DESK PROPS ON MOBILE (Cleanly Separated)
+    // 6. ENLARGED 2.0X DESK PROPS ON MOBILE (Cleanly Separated, Min Padding 45px)
     const cx = width / 2;
-    const propScale = isPortrait ? 1.8 : 1.0;
-    const clocheW = Math.min(width * (isPortrait ? 0.48 : 0.38), 260);
+    const propScale = isPortrait ? 2.0 : 1.0;
+    const clocheW = Math.min(width * (isPortrait ? 0.36 : 0.38), 240);
+
+    // Minimum horizontal gaps (>= 45px) between prop centers
+    const minPadding = isPortrait ? 45 : 60;
 
     // A. Small Desk Lamp (Far Left)
-    const lampX = Math.max(16, width * 0.08);
+    const lampX = Math.max(18, width * 0.08);
     const lampBaseY = deskY + 2;
-    const lampH = height * (isPortrait ? 0.18 : 0.22);
+    const lampH = Math.min(visibleHeight * 0.22, 140);
     const lampTopY = lampBaseY - lampH;
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.beginPath();
-    ctx.ellipse(lampX, lampBaseY, 18 * propScale, 5 * propScale, 0, 0, Math.PI * 2);
+    ctx.ellipse(lampX, lampBaseY, 18 * (isPortrait ? 1.4 : 1.0), 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = '#3A2E20';
     ctx.beginPath();
-    ctx.ellipse(lampX, lampBaseY - 2, 14 * propScale, 4 * propScale, 0, 0, Math.PI * 2);
+    ctx.ellipse(lampX, lampBaseY - 2, 14 * (isPortrait ? 1.4 : 1.0), 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.strokeStyle = '#4D3D2A';
-    ctx.lineWidth = 4 * propScale;
+    ctx.lineWidth = 4 * (isPortrait ? 1.2 : 1.0);
     ctx.beginPath();
     ctx.moveTo(lampX, lampBaseY - 4);
     ctx.quadraticCurveTo(lampX - 12, lampBaseY - lampH * 0.5, lampX + 12, lampTopY + 10);
@@ -452,14 +473,14 @@ export class RoomScene {
     }
 
     // B. Warm Coffee Mug (Left of Dome, Clear Gap from Lamp & Radio)
-    const mugX = Math.max(lampX + 36, cx - clocheW * 0.72);
+    const mugX = Math.max(lampX + minPadding, cx - clocheW * 0.76);
     const mugY = deskY + 4;
     const mugW = 16 * propScale;
     const mugH = 18 * propScale;
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.beginPath();
-    ctx.ellipse(mugX, mugY + mugH, 11 * propScale, 4 * propScale, 0, 0, Math.PI * 2);
+    ctx.ellipse(mugX, mugY + mugH - 2, mugW * 0.6, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = '#D98880';
@@ -468,9 +489,9 @@ export class RoomScene {
     ctx.fill();
 
     ctx.strokeStyle = '#D98880';
-    ctx.lineWidth = 2.5 * propScale;
+    ctx.lineWidth = 2.5 * (isPortrait ? 1.3 : 1.0);
     ctx.beginPath();
-    ctx.arc(mugX - mugW / 2 - 2, mugY + mugH / 2, 4.5 * propScale, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.arc(mugX - mugW / 2 - 2, mugY + mugH / 2, 4.5 * (isPortrait ? 1.3 : 1.0), Math.PI * 0.5, Math.PI * 1.5);
     ctx.stroke();
 
     ctx.fillStyle = '#4A2A18';
@@ -487,129 +508,123 @@ export class RoomScene {
     ctx.quadraticCurveTo(mugX + 6, mugY - 9, mugX + 3, mugY - 16);
     ctx.stroke();
 
-    // C. Retro Wooden Desk Radio (Enlarged 2.2x, Clear Gap from Mug)
-    const radioX = Math.max(mugX + 32, cx - clocheW * 0.48);
+    // C. Retro Wooden Desk Radio (Enlarged 2.0x, Clear Gap from Mug & Dome)
+    const radioX = Math.max(mugX + minPadding, cx - clocheW * 0.48);
     const radioY = deskY + 2;
-    const radioW = 34 * (isPortrait ? 1.3 : 1.0);
-    const radioH = 22 * (isPortrait ? 1.2 : 1.0);
+    const radioW = 34 * propScale;
+    const radioH = 22 * propScale;
 
-    if (radioX - radioW / 2 > mugX + 12 && radioX + radioW / 2 < cx - clocheW * 0.25) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
-      ctx.fillRect(radioX - radioW / 2, radioY + radioH - 2, radioW, 4);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
+    ctx.fillRect(radioX - radioW / 2, radioY + radioH - 2, radioW, 4);
 
-      ctx.fillStyle = '#5C3A21';
-      ctx.beginPath();
-      drawRectRounded(ctx, radioX - radioW / 2, radioY, radioW, radioH, 4);
-      ctx.fill();
+    ctx.fillStyle = '#5C3A21';
+    ctx.beginPath();
+    drawRectRounded(ctx, radioX - radioW / 2, radioY, radioW, radioH, 4);
+    ctx.fill();
 
-      ctx.fillStyle = '#8B6B38';
-      ctx.fillRect(radioX - radioW / 2 + 4, radioY + 4, radioW * 0.5, radioH - 8);
-      ctx.fillStyle = '#3A2010';
-      for (let sl = radioY + 6; sl < radioY + radioH - 6; sl += 3) {
-        ctx.fillRect(radioX - radioW / 2 + 5, sl, radioW * 0.5 - 2, 1);
-      }
-
-      ctx.fillStyle = '#D4A338';
-      ctx.beginPath();
-      ctx.arc(radioX + radioW * 0.25, radioY + 8, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#222222';
-      ctx.beginPath();
-      ctx.arc(radioX + radioW * 0.25, radioY + 15, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#C0C0C0';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(radioX - 6, radioY);
-      ctx.lineTo(radioX - 12, radioY - 14);
-      ctx.stroke();
+    ctx.fillStyle = '#8B6B38';
+    ctx.fillRect(radioX - radioW / 2 + 4, radioY + 4, radioW * 0.5, radioH - 8);
+    ctx.fillStyle = '#3A2010';
+    for (let sl = radioY + 6; sl < radioY + radioH - 6; sl += 3) {
+      ctx.fillRect(radioX - radioW / 2 + 5, sl, radioW * 0.5 - 2, 1);
     }
+
+    ctx.fillStyle = '#D4A338';
+    ctx.beginPath();
+    ctx.arc(radioX + radioW * 0.25, radioY + 8, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#222222';
+    ctx.beginPath();
+    ctx.arc(radioX + radioW * 0.25, radioY + 15, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#C0C0C0';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(radioX - 6, radioY);
+    ctx.lineTo(radioX - 12, radioY - 14);
+    ctx.stroke();
 
     // D. Open Leather-Bound Journal & Pencil (Right of Dome)
     const journalX = Math.min(cx + clocheW * 0.48, width * 0.62);
     const journalY = deskY + 2;
-    const journalW = isPortrait ? Math.min(width * 0.20, 80) : Math.min(width * 0.15, 85);
-    const journalH = journalW * 0.68;
+    const journalW = 40 * propScale;
+    const journalH = journalW * 0.65;
 
-    if (journalX + journalW < width - 28) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
-      ctx.fillRect(journalX - 2, journalY + 2, journalW + 4, journalH + 4);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
+    ctx.fillRect(journalX - 2, journalY + 2, journalW + 4, journalH + 4);
 
-      ctx.fillStyle = '#5C3A21';
-      ctx.fillRect(journalX - 4, journalY - 2, journalW + 8, journalH + 4);
+    ctx.fillStyle = '#5C3A21';
+    ctx.fillRect(journalX - 4, journalY - 2, journalW + 8, journalH + 4);
 
-      ctx.fillStyle = '#FDFBF7';
-      ctx.fillRect(journalX, journalY, journalW, journalH);
+    ctx.fillStyle = '#FDFBF7';
+    ctx.fillRect(journalX, journalY, journalW, journalH);
 
-      ctx.strokeStyle = '#D4C5B2';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(journalX + journalW / 2, journalY);
-      ctx.lineTo(journalX + journalW / 2, journalY + journalH);
-      ctx.stroke();
+    ctx.strokeStyle = '#D4C5B2';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(journalX + journalW / 2, journalY);
+    ctx.lineTo(journalX + journalW / 2, journalY + journalH);
+    ctx.stroke();
 
-      ctx.fillStyle = 'rgba(180, 165, 150, 0.35)';
-      for (let ly = journalY + 5; ly < journalY + journalH - 4; ly += 5) {
-        ctx.fillRect(journalX + 4, ly, journalW / 2 - 8, 1);
-        ctx.fillRect(journalX + journalW / 2 + 4, ly, journalW / 2 - 8, 1);
-      }
-
-      const penX = journalX + journalW + 3;
-      const penY = journalY + journalH - 5;
-      ctx.save();
-      ctx.translate(penX, penY);
-      ctx.rotate(0.35);
-      ctx.fillStyle = '#D4A338';
-      ctx.fillRect(0, 0, 18, 2.5);
-      ctx.fillStyle = '#2B2B2B';
-      ctx.beginPath();
-      ctx.moveTo(18, 0);
-      ctx.lineTo(21, 1.2);
-      ctx.lineTo(18, 2.5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+    ctx.fillStyle = 'rgba(180, 165, 150, 0.35)';
+    for (let ly = journalY + 5; ly < journalY + journalH - 4; ly += 5) {
+      ctx.fillRect(journalX + 4, ly, journalW / 2 - 8, 1);
+      ctx.fillRect(journalX + journalW / 2 + 4, ly, journalW / 2 - 8, 1);
     }
 
-    // E. Wooden Hourglass Timer (Next to Journal, Explicit Gap)
-    const hgX = journalX + journalW + (isPortrait ? 14 : 18);
+    const penX = journalX + journalW + 3;
+    const penY = journalY + journalH - 5;
+    ctx.save();
+    ctx.translate(penX, penY);
+    ctx.rotate(0.35);
+    ctx.fillStyle = '#D4A338';
+    ctx.fillRect(0, 0, 18, 2.5);
+    ctx.fillStyle = '#2B2B2B';
+    ctx.beginPath();
+    ctx.moveTo(18, 0);
+    ctx.lineTo(21, 1.2);
+    ctx.lineTo(18, 2.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // E. Wooden Hourglass Timer (Next to Journal, Minimum Gap)
+    const hgX = journalX + minPadding;
     const hgY = deskY + 2;
-    const hgW = isPortrait ? 16 : 14;
-    const hgH = isPortrait ? 26 : 24;
+    const hgW = 16 * (isPortrait ? 1.3 : 1.0);
+    const hgH = 26 * (isPortrait ? 1.3 : 1.0);
 
-    if (hgX + hgW < width - 18) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-      ctx.beginPath();
-      ctx.ellipse(hgX, hgY + hgH, 8, 3, 0, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    ctx.beginPath();
+    ctx.ellipse(hgX, hgY + hgH, 8, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = '#8B5A2B';
-      ctx.fillRect(hgX - hgW / 2, hgY - 2, hgW, 3);
-      ctx.fillRect(hgX - hgW / 2, hgY + hgH - 1, hgW, 3);
+    ctx.fillStyle = '#8B5A2B';
+    ctx.fillRect(hgX - hgW / 2, hgY - 2, hgW, 3);
+    ctx.fillRect(hgX - hgW / 2, hgY + hgH - 1, hgW, 3);
 
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(hgX - hgW / 2 + 2, hgY + 1);
-      ctx.lineTo(hgX - 2, hgY + hgH / 2);
-      ctx.lineTo(hgX - hgW / 2 + 2, hgY + hgH - 1);
-      ctx.moveTo(hgX + hgW / 2 - 2, hgY + 1);
-      ctx.lineTo(hgX + 2, hgY + hgH / 2);
-      ctx.lineTo(hgX + hgW / 2 - 2, hgY + hgH - 1);
-      ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(hgX - hgW / 2 + 2, hgY + 1);
+    ctx.lineTo(hgX - 2, hgY + hgH / 2);
+    ctx.lineTo(hgX - hgW / 2 + 2, hgY + hgH - 1);
+    ctx.moveTo(hgX + hgW / 2 - 2, hgY + 1);
+    ctx.lineTo(hgX + 2, hgY + hgH / 2);
+    ctx.lineTo(hgX + hgW / 2 - 2, hgY + hgH - 1);
+    ctx.stroke();
 
-      ctx.fillStyle = '#D4A338';
-      ctx.beginPath();
-      ctx.arc(hgX, hgY + hgH - 4, 4, Math.PI, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.fillStyle = '#D4A338';
+    ctx.beginPath();
+    ctx.arc(hgX, hgY + hgH - 4, 4, Math.PI, Math.PI * 2);
+    ctx.fill();
 
-    // F. Vintage Camera (Far Right Corner, Explicit Margin Gap)
-    const camX = Math.min(width - 20, hgX + (isPortrait ? 24 : 30));
+    // F. Vintage Camera (Far Right Corner, Clear Margin)
+    const camX = Math.min(width - 25, hgX + minPadding);
     const camY = deskY + 6;
-    const camW = isPortrait ? 30 : 26;
-    const camH = isPortrait ? 20 : 17;
+    const camW = 30 * (isPortrait ? 1.2 : 1.0);
+    const camH = 20 * (isPortrait ? 1.2 : 1.0);
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
     ctx.fillRect(camX - camW / 2, camY + camH - 2, camW, 4);
@@ -635,7 +650,7 @@ export class RoomScene {
     ctx.arc(camX - 2, camY + camH * 0.55 - 2, 1.8, 0, Math.PI * 2);
     ctx.fill();
 
-    // 8. FOCUS MODE DIMMING OVERLAY
+    // 7. FOCUS MODE DIMMING OVERLAY
     if (isFocused) {
       ctx.fillStyle = 'rgba(13, 13, 14, 0.65)';
       ctx.fillRect(0, 0, width, height);
