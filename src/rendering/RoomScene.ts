@@ -1,14 +1,23 @@
 /**
  * YearGlass Sanctuary — Room Scene
  *
- * Cozy 3D Wooden Workspace Renderer:
- *   - DESK_TOP_Y = visibleHeight * 0.56 (Top edge where tabletop surface meets wall)
- *   - DESK_FRONT_Y = visibleHeight * 0.90 (Front bevel edge near control drawer)
- *   - DESK_SURFACE_Y = DESK_FRONT_Y - 18 (Official tabletop surface baseline)
- *   - Spacious 3D tabletop surface plane with rich warm oak/walnut gradient & wood grain
- *   - NON-OVERLAPPING PROP LAYOUT: All props (Lamp, Mug, Radio, Dome, Journal, Hourglass, Camera)
- *     are explicitly separated with clean clearance gaps from the central glass dome and each other.
- *   - Grounded contact shadows (rgba(0,0,0,0.38)) under every prop base on the tabletop surface.
+ * High-Detail Vector Artwork & 3D Depth-Layered Desktop Renderer:
+ *   - 3D PERSPECTIVE DESK SURFACE:
+ *       * DESK_TOP_Y = visibleHeight * 0.54 (Wall contact line)
+ *       * DESK_FRONT_Y = visibleHeight * 0.92 (Front bevel edge near control sheet)
+ *       * Deep, rich oak/walnut tabletop plane with wood grain and lighting gradient.
+ *   - STAGGERED DEPTH LAYERING (Background / Middleground / Foreground Z-Indexing):
+ *       * Back Layer (DESK_BACK_Y = DESK_TOP_Y + DESK_DEPTH * 0.22): Mid-Century Lamp & Retro Radio
+ *       * Middle Layer (DESK_MID_Y = DESK_TOP_Y + DESK_DEPTH * 0.58): Hero Terrarium Cloche Dome
+ *       * Foreground Layer (DESK_FOREGROUND_Y = DESK_TOP_Y + DESK_DEPTH * 0.84): Ceramic Coffee Mug, Open Leather Journal, Hourglass & Vintage Camera
+ *   - HIGH-DETAIL VECTOR SHADING:
+ *       * Lamp: Mid-century brass/metal articulated lamp with directional light cone.
+ *       * Radio: 3D perspective box, woven grille texture, metallic dials with radial glare, antenna & glowing backlight.
+ *       * Coffee Mug: 3D interior rim, dark coffee surface, ceramic radial shading & steam tendrils.
+ *       * Open Journal: Stacked parchment page depth, leather binding, brass fountain pen with gold nib.
+ *       * Vintage Camera: Leatherette texture, metallic top plate, multi-ringed glass lens with specular arc.
+ *       * Hourglass: Turned wooden caps, glass waist curvature & flowing golden sand.
+ *       * Translucent drop shadows (rgba(0,0,0,0.38)) under every prop base.
  */
 
 export interface RoomState {
@@ -19,8 +28,9 @@ export interface RoomState {
 export function getDeskSurfaceY(height: number, width?: number): number {
   const visibleHeight = Math.max(100, height - 210);
   const isMobile = width !== undefined ? width <= 600 : true;
-  const DESK_FRONT_Y = visibleHeight * (isMobile ? 0.90 : 0.92);
-  return DESK_FRONT_Y - 18;
+  const DESK_TOP_Y = visibleHeight * (isMobile ? 0.54 : 0.56);
+  const DESK_FRONT_Y = visibleHeight * (isMobile ? 0.92 : 0.94);
+  return DESK_TOP_Y + (DESK_FRONT_Y - DESK_TOP_Y) * 0.58;
 }
 
 export class RoomScene {
@@ -43,7 +53,7 @@ export class RoomScene {
     this.windowFrame = document.createElement('div');
     this.windowFrame.className = 'yearglass-room-window';
     this.windowFrame.style.cssText =
-      'position:absolute;top:6%;left:50%;transform:translateX(-50%);width:min(44%, 320px);height:min(30%, 210px);' +
+      'position:absolute;top:5%;left:50%;transform:translateX(-50%);width:min(44%, 320px);height:min(30%, 200px);' +
       'border-radius:10px;border:8px solid #6e472b;background:linear-gradient(180deg,#7b628a,#f0a85d,#fce4c6);' +
       'box-shadow:inset 0 0 25px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2);';
 
@@ -51,7 +61,7 @@ export class RoomScene {
     this.shelf = document.createElement('div');
     this.shelf.className = 'yearglass-room-shelf';
     this.shelf.style.cssText =
-      'position:absolute;top:18%;left:3%;width:min(20%, 150px);height:10px;' +
+      'position:absolute;top:16%;left:3%;width:min(20%, 150px);height:10px;' +
       'background:linear-gradient(180deg,#8b5a2b,#5c3a21);' +
       'border-bottom:2px solid #3d271d;box-shadow:0 6px 16px rgba(0,0,0,0.3);';
 
@@ -59,7 +69,7 @@ export class RoomScene {
     this.desk = document.createElement('div');
     this.desk.className = 'yearglass-room-desk';
     this.desk.style.cssText =
-      'position:absolute;bottom:0;left:0;right:0;width:100%;height:45%;' +
+      'position:absolute;bottom:0;left:0;right:0;width:100%;height:46%;' +
       'background:linear-gradient(180deg,#6e4c2e 0%,#3b2312 100%);' +
       'border-top:4px solid #a67c4e;' +
       'box-shadow:inset 0 4px 20px rgba(0,0,0,0.5), 0 -8px 24px rgba(0,0,0,0.3);';
@@ -120,11 +130,14 @@ export class RoomScene {
 
     const visibleHeight = Math.max(100, height - 210);
 
-    // 3D Desk Geometry Constants
-    const DESK_TOP_Y = visibleHeight * (isPortrait ? 0.56 : 0.58);
-    const DESK_FRONT_Y = visibleHeight * (isPortrait ? 0.90 : 0.92);
+    // 3D Perspective Desktop Depth Layers
+    const DESK_TOP_Y = visibleHeight * (isPortrait ? 0.54 : 0.56);
+    const DESK_FRONT_Y = visibleHeight * (isPortrait ? 0.92 : 0.94);
     const DESK_DEPTH = DESK_FRONT_Y - DESK_TOP_Y;
-    const DESK_SURFACE_Y = DESK_FRONT_Y - 18; // Official surface line where dome & props rest
+
+    // Staggered Depth Baselines
+    const DESK_BACK_Y = DESK_TOP_Y + DESK_DEPTH * 0.22; // Background (Lamp & Radio)
+    const DESK_FOREGROUND_Y = DESK_TOP_Y + DESK_DEPTH * 0.84; // Foreground (Mug, Journal, Camera, Hourglass)
 
     const drawRectRounded = (
       c: CanvasRenderingContext2D,
@@ -174,13 +187,13 @@ export class RoomScene {
       ? Math.min(width * 0.52, 220)
       : Math.min(width * 0.42, 340);
     const windowHeight = isPortrait
-      ? Math.min(visibleHeight * 0.30, 160)
-      : Math.min(visibleHeight * 0.36, 230);
+      ? Math.min(visibleHeight * 0.28, 150)
+      : Math.min(visibleHeight * 0.35, 220);
 
     const shelfX = Math.max(10, width * 0.03);
     const shelfW = isPortrait ? Math.min(width * 0.18, 85) : Math.min(width * 0.22, 150);
     const windowX = Math.max((width - windowWidth) / 2, shelfX + shelfW + 18);
-    const windowY = Math.max(12, visibleHeight * 0.06);
+    const windowY = Math.max(12, visibleHeight * 0.05);
 
     // Window Outer Wooden Frame
     ctx.fillStyle = isNight ? '#4D301B' : '#6E472B';
@@ -257,8 +270,8 @@ export class RoomScene {
     ctx.fill();
 
     // 3. LEFT WALL FLOATING SHELVES & DECOR
-    const shelf1Y = visibleHeight * 0.16;
-    const shelf2Y = visibleHeight * 0.32;
+    const shelf1Y = visibleHeight * 0.15;
+    const shelf2Y = visibleHeight * 0.30;
 
     const drawPlank = (sx: number, sy: number, sw: number) => {
       ctx.fillStyle = '#8B5A2B';
@@ -327,7 +340,7 @@ export class RoomScene {
       const art1W = Math.min(width * 0.18, 120);
       const art1H = art1W * 0.75;
       const art1X = width - art1W - Math.max(16, width * 0.04);
-      const art1Y = visibleHeight * 0.14;
+      const art1Y = visibleHeight * 0.13;
 
       ctx.fillStyle = isNight ? '#4D301B' : '#6E472B';
       ctx.fillRect(art1X - 6, art1Y - 6, art1W + 12, art1H + 12);
@@ -378,12 +391,12 @@ export class RoomScene {
       }
     }
 
-    // 5. REAL 3D WOODEN DESK STRUCTURE (Deep Surface Plane + Crisp Front Bevel + Under-Shadow)
+    // 5. REAL 3D WOODEN DESK SURFACE STRUCTURE
     // A. Wall Contact Shadow Line along DESK_TOP_Y
     ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
     ctx.fillRect(0, DESK_TOP_Y - 2, width, 3);
 
-    // B. Spacious Top Surface Depth Plane (DESK_TOP_Y to DESK_FRONT_Y)
+    // B. Deep 3D Tabletop Surface Plane (DESK_TOP_Y to DESK_FRONT_Y)
     const topSurfaceGrad = ctx.createLinearGradient(0, DESK_TOP_Y, 0, DESK_FRONT_Y);
     if (isNight) {
       topSurfaceGrad.addColorStop(0, '#3D2516');
@@ -407,7 +420,7 @@ export class RoomScene {
       ctx.fillRect(0, gy, width, 1);
     }
 
-    // C. Crisp 3D Front Bevel Edge (Lighter Highlight Border directly along DESK_FRONT_Y)
+    // C. Crisp 3D Front Bevel Edge
     ctx.fillStyle = isNight ? '#5C3A21' : '#A67C4E';
     ctx.fillRect(0, DESK_FRONT_Y - 3, width, 4);
 
@@ -425,23 +438,21 @@ export class RoomScene {
     ctx.fillStyle = frontFaceGrad;
     ctx.fillRect(0, DESK_FRONT_Y + 1, width, height - DESK_FRONT_Y - 1);
 
-    // E. Desk Under-Shadow beneath Front Bevel Trim Band
+    // E. Desk Under-Shadow
     const underShadowGrad = ctx.createLinearGradient(0, DESK_FRONT_Y + 1, 0, DESK_FRONT_Y + 20);
     underShadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.48)');
     underShadowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = underShadowGrad;
     ctx.fillRect(0, DESK_FRONT_Y + 1, width, 19);
 
-    // 6. NON-OVERLAPPING DESK PROPS GROUNDED ON DESK_SURFACE_Y
+    // 6. STAGGERED 3D PERSPECTIVE DESK PROPS (BACKGROUND & FOREGROUND DEPTH LAYERS)
     const cx = width / 2;
-    const propScale = isPortrait ? 1.4 : 1.0;
+    const propScale = isPortrait ? 1.3 : 1.0;
     const clocheW = Math.min(width * (isPortrait ? 0.34 : 0.28), 200);
 
-    // Dome Boundaries (with Saucer Rim Clearance)
     const domeLeft = cx - clocheW * 0.50 - 12;
     const domeRight = cx + clocheW * 0.50 + 12;
 
-    // Helper for prop base contact shadows
     const drawContactShadow = (sx: number, sy: number, sw: number, sh = 5) => {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
       ctx.beginPath();
@@ -449,19 +460,30 @@ export class RoomScene {
       ctx.fill();
     };
 
-    // A. Small Workspace Lamp (Far Left)
+    // --- BACKGROUND DEPTH LAYER (DESK_BACK_Y near wall) ---
+
+    // A1. Mid-Century Workspace Lamp (Far Left Back Corner)
     const lampX = Math.max(16, width * 0.06);
-    const lampBaseY = DESK_SURFACE_Y;
-    const lampH = Math.min(visibleHeight * 0.20, 120);
+    const lampBaseY = DESK_BACK_Y;
+    const lampH = Math.min(visibleHeight * 0.22, 130);
     const lampTopY = lampBaseY - lampH;
 
-    drawContactShadow(lampX, lampBaseY + 2, 18 * propScale, 5);
+    drawContactShadow(lampX, lampBaseY + 2, 20 * propScale, 5);
 
-    ctx.fillStyle = '#3A2E20';
+    // Lamp Round Heavy Base
+    const lampBaseGrad = ctx.createRadialGradient(lampX - 2, lampBaseY - 4, 1, lampX, lampBaseY - 2, 14 * propScale);
+    lampBaseGrad.addColorStop(0, '#5A4832');
+    lampBaseGrad.addColorStop(0.7, '#3A2E20');
+    lampBaseGrad.addColorStop(1, '#241E14');
+    ctx.fillStyle = lampBaseGrad;
     ctx.beginPath();
-    ctx.ellipse(lampX, lampBaseY - 2, 12 * propScale, 3.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(lampX, lampBaseY - 2, 14 * propScale, 4.5, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = '#8B6B38';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
+    // Articulated Arm
     ctx.strokeStyle = '#4D3D2A';
     ctx.lineWidth = 3.5 * propScale;
     ctx.beginPath();
@@ -469,13 +491,24 @@ export class RoomScene {
     ctx.quadraticCurveTo(lampX - 10, lampBaseY - lampH * 0.5, lampX + 10, lampTopY + 8);
     ctx.stroke();
 
+    // Brass Rivet Joint
+    ctx.fillStyle = '#D4A338';
+    ctx.beginPath();
+    ctx.arc(lampX - 2, lampBaseY - lampH * 0.45, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lamp Articulated Shade
     const shadeX = lampX + 12;
     const shadeY = lampTopY + 8;
-    ctx.fillStyle = '#E2B144';
+    const shadeGrad = ctx.createLinearGradient(shadeX - 10, shadeY - 8, shadeX + 18, shadeY + 10);
+    shadeGrad.addColorStop(0, '#F5C85C');
+    shadeGrad.addColorStop(0.5, '#E2B144');
+    shadeGrad.addColorStop(1, '#A87A20');
+    ctx.fillStyle = shadeGrad;
     ctx.beginPath();
     ctx.moveTo(shadeX - 8, shadeY);
     ctx.lineTo(shadeX + 10, shadeY - 6);
-    ctx.lineTo(shadeX + 15, shadeY + 8);
+    ctx.lineTo(shadeX + 16, shadeY + 8);
     ctx.lineTo(shadeX - 12, shadeY + 8);
     ctx.closePath();
     ctx.fill();
@@ -485,7 +518,7 @@ export class RoomScene {
       const glowY = shadeY + 8;
 
       ctx.save();
-      const lightBeam = ctx.createLinearGradient(glowX, glowY, glowX + 30, DESK_SURFACE_Y);
+      const lightBeam = ctx.createLinearGradient(glowX, glowY, glowX + 35, DESK_FOREGROUND_Y);
       lightBeam.addColorStop(0, 'rgba(255, 235, 160, 0.65)');
       lightBeam.addColorStop(0.6, 'rgba(255, 200, 110, 0.30)');
       lightBeam.addColorStop(1, 'rgba(255, 180, 80, 0.05)');
@@ -494,167 +527,94 @@ export class RoomScene {
       ctx.beginPath();
       ctx.moveTo(glowX - 10, glowY);
       ctx.lineTo(glowX + 14, glowY);
-      ctx.lineTo(glowX + width * 0.30, DESK_SURFACE_Y + 10);
-      ctx.lineTo(glowX - width * 0.10, DESK_SURFACE_Y + 10);
+      ctx.lineTo(glowX + width * 0.32, DESK_FOREGROUND_Y + 15);
+      ctx.lineTo(glowX - width * 0.10, DESK_FOREGROUND_Y + 15);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
     }
 
-    // B. Retro Wooden Desk Radio (Left of Dome, Safely Outside Dome Rim)
+    // A2. Retro 3D Wooden Desk Radio (Left Back, Near Wall)
     const radioX = Math.min(domeLeft - 22, isPortrait ? width * 0.28 : cx - clocheW * 0.60);
     const radioW = 32 * propScale;
     const radioH = 20 * propScale;
-    const radioY = DESK_SURFACE_Y - radioH;
+    const radioY = DESK_BACK_Y + 4 - radioH;
 
-    drawContactShadow(radioX, DESK_SURFACE_Y + 2, radioW * 0.6, 5);
+    drawContactShadow(radioX, DESK_BACK_Y + 6, radioW * 0.6, 5);
 
-    ctx.fillStyle = '#5C3A21';
+    // 3D Top Perspective Plane
+    ctx.fillStyle = '#7C4A28';
     ctx.beginPath();
-    drawRectRounded(ctx, radioX - radioW / 2, radioY, radioW, radioH, 4);
-    ctx.fill();
-
-    ctx.fillStyle = '#8B6B38';
-    ctx.fillRect(radioX - radioW / 2 + 4, radioY + 4, radioW * 0.5, radioH - 8);
-    ctx.fillStyle = '#3A2010';
-    for (let sl = radioY + 6; sl < radioY + radioH - 6; sl += 3) {
-      ctx.fillRect(radioX - radioW / 2 + 5, sl, radioW * 0.5 - 2, 1);
-    }
-
-    ctx.fillStyle = '#D4A338';
-    ctx.beginPath();
-    ctx.arc(radioX + radioW * 0.25, radioY + 7, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#222222';
-    ctx.beginPath();
-    ctx.arc(radioX + radioW * 0.25, radioY + 13, 2.8, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#C0C0C0';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(radioX - 5, radioY);
-    ctx.lineTo(radioX - 10, radioY - 12);
-    ctx.stroke();
-
-    // C. Warm Coffee Mug (Between Lamp & Radio, Zero Overlap)
-    const mugX = Math.max(lampX + 32, (lampX + radioX) / 2);
-    const mugW = 16 * propScale;
-    const mugH = 18 * propScale;
-    const mugY = DESK_SURFACE_Y - mugH;
-
-    drawContactShadow(mugX, DESK_SURFACE_Y + 2, mugW * 0.65, 4.5);
-
-    ctx.fillStyle = '#D98880';
-    ctx.beginPath();
-    drawRectRounded(ctx, mugX - mugW / 2, mugY, mugW, mugH, 3);
-    ctx.fill();
-
-    ctx.strokeStyle = '#D98880';
-    ctx.lineWidth = 2.2 * propScale;
-    ctx.beginPath();
-    ctx.arc(mugX - mugW / 2 - 2, mugY + mugH / 2, 4.0 * propScale, Math.PI * 0.5, Math.PI * 1.5);
-    ctx.stroke();
-
-    ctx.fillStyle = '#4A2A18';
-    ctx.beginPath();
-    ctx.ellipse(mugX, mugY + 2, mugW / 2 - 1, 2.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(mugX - 2, mugY - 2);
-    ctx.quadraticCurveTo(mugX - 5, mugY - 8, mugX - 2, mugY - 14);
-    ctx.moveTo(mugX + 3, mugY - 2);
-    ctx.quadraticCurveTo(mugX + 6, mugY - 9, mugX + 3, mugY - 16);
-    ctx.stroke();
-
-    // D. Open Leather-Bound Journal & Pencil (Right of Dome, Safely Outside Dome Rim)
-    const journalX = Math.max(domeRight + 18, isPortrait ? width * 0.70 : cx + clocheW * 0.60);
-    const journalW = 36 * propScale;
-    const journalH = journalW * 0.65;
-    const journalY = DESK_SURFACE_Y - journalH + 4;
-
-    drawContactShadow(journalX + journalW / 2, DESK_SURFACE_Y + 2, journalW * 0.55, 5);
-
-    ctx.fillStyle = '#5C3A21';
-    ctx.fillRect(journalX - 3, journalY - 2, journalW + 6, journalH + 4);
-
-    ctx.fillStyle = '#FDFBF7';
-    ctx.fillRect(journalX, journalY, journalW, journalH);
-
-    ctx.strokeStyle = '#D4C5B2';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.moveTo(journalX + journalW / 2, journalY);
-    ctx.lineTo(journalX + journalW / 2, journalY + journalH);
-    ctx.stroke();
-
-    ctx.fillStyle = 'rgba(180, 165, 150, 0.35)';
-    for (let ly = journalY + 5; ly < journalY + journalH - 4; ly += 5) {
-      ctx.fillRect(journalX + 3, ly, journalW / 2 - 6, 1);
-      ctx.fillRect(journalX + journalW / 2 + 3, ly, journalW / 2 - 6, 1);
-    }
-
-    const penX = journalX + journalW + 2;
-    const penY = journalY + journalH - 4;
-    ctx.save();
-    ctx.translate(penX, penY);
-    ctx.rotate(0.35);
-    ctx.fillStyle = '#D4A338';
-    ctx.fillRect(0, 0, 16, 2.2);
-    ctx.fillStyle = '#2B2B2B';
-    ctx.beginPath();
-    ctx.moveTo(16, 0);
-    ctx.lineTo(19, 1.1);
-    ctx.lineTo(16, 2.2);
+    ctx.moveTo(radioX - radioW / 2 + 2, radioY);
+    ctx.lineTo(radioX + radioW / 2 - 2, radioY);
+    ctx.lineTo(radioX + radioW / 2, radioY + 3);
+    ctx.lineTo(radioX - radioW / 2, radioY + 3);
     ctx.closePath();
     ctx.fill();
-    ctx.restore();
 
-    // E. Vintage Camera (Far Right Corner)
-    const camX = Math.min(width - 20, isPortrait ? width * 0.92 : width - 35);
-    const camW = 28 * propScale;
-    const camH = 18 * propScale;
-    const camY = DESK_SURFACE_Y - camH + 4;
-
-    drawContactShadow(camX, DESK_SURFACE_Y + 2, camW * 0.6, 5);
-
-    ctx.fillStyle = '#2A2A2A';
+    // Front Walnut Casing
+    const radioBodyGrad = ctx.createLinearGradient(radioX - radioW / 2, radioY, radioX + radioW / 2, radioY + radioH);
+    radioBodyGrad.addColorStop(0, '#6E4427');
+    radioBodyGrad.addColorStop(0.6, '#5C3A21');
+    radioBodyGrad.addColorStop(1, '#3B2010');
+    ctx.fillStyle = radioBodyGrad;
     ctx.beginPath();
-    drawRectRounded(ctx, camX - camW / 2, camY, camW, camH, 3);
+    drawRectRounded(ctx, radioX - radioW / 2, radioY + 3, radioW, radioH - 3, 3);
     ctx.fill();
 
-    ctx.fillStyle = '#C0C0C0';
-    ctx.fillRect(camX - camW / 2, camY, camW, 3.5);
+    // Woven Speaker Grille Texture
+    ctx.fillStyle = '#8B6B38';
+    ctx.fillRect(radioX - radioW / 2 + 4, radioY + 6, radioW * 0.48, radioH - 9);
+    ctx.fillStyle = '#2A1608';
+    for (let sl = radioY + 8; sl < radioY + radioH - 6; sl += 3) {
+      ctx.fillRect(radioX - radioW / 2 + 5, sl, radioW * 0.48 - 2, 1);
+    }
 
-    ctx.fillStyle = '#1A1A1A';
+    // Glowing Illuminated Frequency Display Window
+    ctx.fillStyle = '#E28D38';
+    ctx.fillRect(radioX + 2, radioY + 6, radioW * 0.35, 6);
+    ctx.fillStyle = '#111111';
+    ctx.fillRect(radioX + 8, radioY + 6, 1.5, 6); // Dial Needle
+
+    // Metallic Dials with Radial Highlights
+    const dial1 = ctx.createRadialGradient(radioX + 6, radioY + 15, 0.5, radioX + 6, radioY + 15, 3.5);
+    dial1.addColorStop(0, '#FFF5C0');
+    dial1.addColorStop(0.5, '#D4A338');
+    dial1.addColorStop(1, '#7A5418');
+    ctx.fillStyle = dial1;
     ctx.beginPath();
-    ctx.arc(camX, camY + camH * 0.55, 5, 0, Math.PI * 2);
+    ctx.arc(radioX + 6, radioY + 15, 3.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#808080';
+
+    const dial2 = ctx.createRadialGradient(radioX + 14, radioY + 15, 0.5, radioX + 14, radioY + 15, 2.5);
+    dial2.addColorStop(0, '#E0E0E0');
+    dial2.addColorStop(1, '#404040');
+    ctx.fillStyle = dial2;
+    ctx.beginPath();
+    ctx.arc(radioX + 14, radioY + 15, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Telescoping Antenna Wire
+    ctx.strokeStyle = '#C0C0C0';
     ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(radioX - 5, radioY + 3);
+    ctx.lineTo(radioX - 10, radioY - 10);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.beginPath();
-    ctx.arc(camX - 2, camY + camH * 0.55 - 2, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // F. Wooden Hourglass Timer (Between Journal & Camera, Zero Overlap)
-    const hgX = (journalX + journalW + camX - camW / 2) / 2;
+    // A3. Wooden Hourglass Timer (Right Back Region)
+    const hgX = isPortrait ? Math.min(width - 20, width * 0.88) : width * 0.78;
     const hgW = 14 * propScale;
     const hgH = 22 * propScale;
-    const hgY = DESK_SURFACE_Y - hgH;
+    const hgY = DESK_BACK_Y + 6 - hgH;
 
-    drawContactShadow(hgX, DESK_SURFACE_Y + 2, hgW * 0.6, 4.5);
+    drawContactShadow(hgX, DESK_BACK_Y + 8, hgW * 0.6, 4.5);
 
     ctx.fillStyle = '#8B5A2B';
     ctx.fillRect(hgX - hgW / 2, hgY - 2, hgW, 3);
     ctx.fillRect(hgX - hgW / 2, hgY + hgH - 1, hgW, 3);
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.70)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(hgX - hgW / 2 + 2, hgY + 1);
@@ -669,6 +629,151 @@ export class RoomScene {
     ctx.beginPath();
     ctx.arc(hgX, hgY + hgH - 4, 3.5, Math.PI, Math.PI * 2);
     ctx.fill();
+
+
+    // --- FOREGROUND DEPTH LAYER (DESK_FOREGROUND_Y near viewer) ---
+
+    // B1. Ceramic Coffee Mug (Left Foreground, Scaled & Shaded)
+    const mugX = Math.max(lampX + 32, isPortrait ? width * 0.20 : width * 0.22);
+    const mugW = 18 * propScale;
+    const mugH = 20 * propScale;
+    const mugY = DESK_FOREGROUND_Y - mugH;
+
+    drawContactShadow(mugX, DESK_FOREGROUND_Y + 2, mugW * 0.7, 5);
+
+    // Ceramic Radial Gradient Body
+    const mugBodyGrad = ctx.createRadialGradient(mugX - 3, mugY + mugH * 0.4, 2, mugX, mugY + mugH * 0.5, mugW * 0.8);
+    mugBodyGrad.addColorStop(0, '#E8988F');
+    mugBodyGrad.addColorStop(0.6, '#D98880');
+    mugBodyGrad.addColorStop(1, '#9E4E46');
+    ctx.fillStyle = mugBodyGrad;
+    ctx.beginPath();
+    drawRectRounded(ctx, mugX - mugW / 2, mugY, mugW, mugH, 3);
+    ctx.fill();
+
+    // Curved Handle with Glare
+    ctx.strokeStyle = '#D98880';
+    ctx.lineWidth = 2.5 * propScale;
+    ctx.beginPath();
+    ctx.arc(mugX - mugW / 2 - 2, mugY + mugH / 2, 4.5 * propScale, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.stroke();
+
+    // Elliptical Top Rim & Dark Coffee Interior
+    ctx.fillStyle = '#3B1E10';
+    ctx.beginPath();
+    ctx.ellipse(mugX, mugY + 2, mugW / 2 - 1, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Rising Steam Tendrils
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.26)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(mugX - 2, mugY - 2);
+    ctx.quadraticCurveTo(mugX - 5, mugY - 8, mugX - 2, mugY - 14);
+    ctx.moveTo(mugX + 3, mugY - 2);
+    ctx.quadraticCurveTo(mugX + 6, mugY - 9, mugX + 3, mugY - 16);
+    ctx.stroke();
+
+    // B2. Open Leather-Bound Journal & Brass Pen (Right Foreground)
+    const journalX = Math.max(domeRight + 16, isPortrait ? width * 0.62 : width * 0.64);
+    const journalW = 38 * propScale;
+    const journalH = journalW * 0.65;
+    const journalY = DESK_FOREGROUND_Y - journalH + 4;
+
+    drawContactShadow(journalX + journalW / 2, DESK_FOREGROUND_Y + 2, journalW * 0.55, 5);
+
+    // Leather Cover Outlines
+    ctx.fillStyle = '#4A2E19';
+    ctx.fillRect(journalX - 3, journalY - 2, journalW + 6, journalH + 4);
+
+    // Layered Parchment Paper Pages
+    ctx.fillStyle = '#E8DEC8';
+    ctx.fillRect(journalX - 1, journalY - 1, journalW + 2, journalH + 2);
+    ctx.fillStyle = '#FDFBF7';
+    ctx.fillRect(journalX, journalY, journalW, journalH);
+
+    // Spine & Ruling Lines
+    ctx.strokeStyle = '#C2B29D';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(journalX + journalW / 2, journalY);
+    ctx.lineTo(journalX + journalW / 2, journalY + journalH);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(180, 165, 150, 0.35)';
+    for (let ly = journalY + 5; ly < journalY + journalH - 4; ly += 5) {
+      ctx.fillRect(journalX + 3, ly, journalW / 2 - 6, 1);
+      ctx.fillRect(journalX + journalW / 2 + 3, ly, journalW / 2 - 6, 1);
+    }
+
+    // Polished Brass Fountain Pen with Nib
+    const penX = journalX + journalW + 2;
+    const penY = journalY + journalH - 4;
+    ctx.save();
+    ctx.translate(penX, penY);
+    ctx.rotate(0.35);
+
+    const penGrad = ctx.createLinearGradient(0, 0, 16, 2.2);
+    penGrad.addColorStop(0, '#F5C85C');
+    penGrad.addColorStop(0.5, '#D4A338');
+    penGrad.addColorStop(1, '#8B6A18');
+    ctx.fillStyle = penGrad;
+    ctx.fillRect(0, 0, 16, 2.2);
+
+    ctx.fillStyle = '#2B2B2B';
+    ctx.beginPath();
+    ctx.moveTo(16, 0);
+    ctx.lineTo(19, 1.1);
+    ctx.lineTo(16, 2.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // B3. Vintage Camera (Far Right Foreground)
+    const camX = Math.min(width - 18, journalX + journalW + 22);
+    const camW = 28 * propScale;
+    const camH = 18 * propScale;
+    const camY = DESK_FOREGROUND_Y - camH + 4;
+
+    drawContactShadow(camX, DESK_FOREGROUND_Y + 2, camW * 0.6, 5);
+
+    // Textured Leatherette Body
+    ctx.fillStyle = '#222222';
+    ctx.beginPath();
+    drawRectRounded(ctx, camX - camW / 2, camY, camW, camH, 3);
+    ctx.fill();
+
+    // Metallic Brushed Top Plate
+    const topPlate = ctx.createLinearGradient(camX - camW / 2, camY, camX + camW / 2, camY + 4);
+    topPlate.addColorStop(0, '#E0E0E0');
+    topPlate.addColorStop(0.5, '#B0B0B0');
+    topPlate.addColorStop(1, '#808080');
+    ctx.fillStyle = topPlate;
+    ctx.fillRect(camX - camW / 2, camY, camW, 3.5);
+
+    // Shutter Button & Dial
+    ctx.fillStyle = '#D0D0D0';
+    ctx.fillRect(camX - camW * 0.30, camY - 2, 4, 2);
+
+    // Multi-Ringed Lens Barrel
+    ctx.fillStyle = '#1A1A1A';
+    ctx.beginPath();
+    ctx.arc(camX, camY + camH * 0.55, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#808080';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Cyan Lens Reflection Arc
+    ctx.strokeStyle = 'rgba(180, 230, 255, 0.60)';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.arc(camX, camY + camH * 0.55, 3.5, Math.PI * 0.8, Math.PI * 1.5);
+    ctx.stroke();
 
     // 7. FOCUS MODE DIMMING OVERLAY
     if (isFocused) {
